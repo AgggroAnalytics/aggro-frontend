@@ -13,7 +13,14 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
+import { useCurrentOrgStore } from '@/store/currentOrg';
 import { GalleryVerticalEnd } from 'lucide-vue-next';
+import { storeToRefs } from 'pinia';
+
+
+const currentOrgStore = useCurrentOrgStore()
+const { currentOrgId } = storeToRefs(currentOrgStore)
+
 </script>
 <template>
   <Sidebar collapsible="offcanvas" variant="sidebar">
@@ -40,19 +47,12 @@ import { GalleryVerticalEnd } from 'lucide-vue-next';
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton as-child>
-                <RouterLink to="/">
-                  <span>Домой</span>
-                </RouterLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton as-child>
                 <RouterLink to="/organization">
                   <span>Организации</span>
                 </RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
+            <SidebarMenuItem v-if="currentOrgId">
               <SidebarMenuButton as-child>
                 <RouterLink to="/fields">
                   <span>Поля</span>

@@ -40,6 +40,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/fields/[id]': RouteRecordInfo<
+      '/fields/[id]',
+      '/fields/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
     '/login': RouteRecordInfo<
       '/login',
       '/login',
@@ -83,6 +90,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/fields/index.vue': {
       routes:
         | '/fields/'
+      views:
+        | never
+    }
+    'src/pages/fields/[id].vue': {
+      routes:
+        | '/fields/[id]'
       views:
         | never
     }

@@ -9,23 +9,23 @@ export const router = createRouter({
   routes,
 })
 
-router.beforeEach(async (to, _from, next) => {
-  const currentOrgStore = useCurrentOrgStore()
-  if (!currentOrgStore.currentOrgId) {
-    const orgs = await getOrganizations()
-    currentOrgStore.currentOrgId = orgs.data?.organizations?.at(0)?.id
-  }
+router.beforeEach(async (to) => {
   if (to.meta.public) {
     if (to.name === '/login' && keycloak.authenticated) {
-      next(typeof to.query.redirect === 'string' ? to.query.redirect : '/');
-      return;
+      return typeof to.query.redirect === 'string' ? to.query.redirect : '/';
     }
-    next();
     return;
   }
   if (!keycloak.authenticated) {
-    next({ name: '/login', query: { redirect: to.fullPath } });
-    return;
+    if (to.name === '/login') {
+      return;
+    }
+    return { name: '/login', query: { redirect: to.fullPath } };
   }
-  next();
+
+  const currentOrgStore = useCurrentOrgStore();
+  if (!currentOrgStore.currentOrgId) {
+    const orgs = await getOrganizations();
+    currentOrgStore.currentOrgId = orgs.data?.organizations?.at(0)?.id;
+  }
 });

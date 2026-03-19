@@ -17,8 +17,11 @@ import { postOrganizations } from '@/api';
 import MainLayout from '@/components/layout/MainLayout.vue';
 import Button from '@/components/ui/button/Button.vue';
 import Input from '@/components/ui/input/Input.vue';
-import { useMutation } from '@tanstack/vue-query';
+import { useCurrentOrgStore } from '@/store/currentOrg';
+import { useMutation, useQueryClient } from '@tanstack/vue-query';
+import { storeToRefs } from 'pinia';
 import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 const orgName = ref("")
 
@@ -26,10 +29,22 @@ const canSubmit = computed(() => {
   return orgName.value.length !== 0
 })
 
+const currentOrgStore = useCurrentOrgStore()
+const { currentOrgId } = storeToRefs(currentOrgStore)
+const router = useRouter()
+
+
 const createOrg = useMutation({
   mutationFn: async () => {
     return await postOrganizations({ body: { name: orgName.value } })
+  },
+  onSettled(data) {
+    client.invalidateQueries({ queryKey: ["organizations"] })
+    currentOrgId.value = data?.data?.id
+    router.push("/fields")
   }
 })
+
+const client = useQueryClient()
 
 </script>
