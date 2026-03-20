@@ -12,9 +12,9 @@
 
       <Separator class="my-4" />
       <div v-if="fields.length">
-        <h2>Поля</h2>
+        <h2 class="text-xl font-semibold mb-4">Поля</h2>
         <div v-for="field in fields">
-          <FieldCard :field="field" @fitTo="fitTo(field.id!)" />
+          <FieldCard :field="field" @fitTo="fitTo(field.id!)" @enter="navToField(field.id!)" />
         </div>
       </div>
     </div>
@@ -30,9 +30,9 @@ import { useMapPolygons } from '@/composables/useMapPolygons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { getFields, postFields } from '@/api';
 import NewFieldForm from './NewFieldForm.vue';
-import { Button } from '../ui/button';
 import FieldCard from './FieldCard.vue';
 import Separator from '../ui/separator/Separator.vue';
+import { useRouter } from 'vue-router';
 
 
 const currentOrganizatonStore = useCurrentOrgStore()
@@ -82,5 +82,17 @@ const createField = useMutation({
   }
 })
 
+const router = useRouter()
+
+const navToField = (id: string) => {
+  router.push({
+    name: "/fields/[id]",
+    params: {
+      id
+    }
+
+  })
+
+}
 
 </script>

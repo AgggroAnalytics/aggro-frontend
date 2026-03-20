@@ -18,7 +18,13 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: Date): void;
 }>();
 
+const containerRef = ref<HTMLDivElement | null>(null);
 const svgRef = ref<SVGSVGElement | null>(null);
+const isDragging = ref(false);
+const dragCandidate = ref(false);
+const dragStartX = ref(0);
+const dragStartScrollLeft = ref(0);
+const hasInitialScroll = ref(false);
 
 const sortedDates = computed(() =>
   [...props.dates]
@@ -37,24 +43,22 @@ function formatDate(d: Date) {
 function draw() {
   if (!svgRef.value || !sortedDates.value.length) return;
 
-  const width = props.width;
+  const step = 120;
+  const containerWidth = containerRef.value?.clientWidth ?? props.width;
+  const width = Math.max(containerWidth, sortedDates.value.length * step);
   const height = props.height;
   const margin = { left: 24, right: 24 };
   const y = height / 2;
 
   const svg = d3.select(svgRef.value);
+  svg.attr("width", width);
   svg.selectAll("*").remove();
 
-  const min = sortedDates.value[0];
-  const max = sortedDates.value[sortedDates.value.length - 1];
-
   const x = d3
-    .scaleTime()
-    .domain(min.getTime() === max.getTime()
-      ? [new Date(min.getTime() - 86400000), new Date(max.getTime() + 86400000)]
-      : [min, max]
-    )
-    .range([margin.left, width - margin.right]);
+    .scalePoint<number>()
+    .domain(sortedDates.value.map((_, index) => index))
+    .range([margin.left, width - margin.right])
+    .padding(0.5);
 
   svg
     .append("line")
@@ -70,7 +74,7 @@ function draw() {
     .data(sortedDates.value, (d: any) => d.getTime())
     .join("g")
     .attr("class", "point")
-    .attr("transform", (d) => `translate(${x(d)}, ${y})`)
+    .attr("transform", (_d, index) => `translate(${x(index)}, ${y})`)
     .style("cursor", "pointer")
     .on("click", (_, d) => emit("update:modelValue", d));
 
@@ -86,12 +90,69 @@ function draw() {
     .attr("y", -12)
     .attr("font-size", 12)
     .attr("fill", (d) => (sameDate(d, props.modelValue) ? "#2563eb" : "#475569"));
+
+  if (containerRef.value && !hasInitialScroll.value) {
+    containerRef.value.scrollLeft = containerRef.value.scrollWidth;
+    hasInitialScroll.value = true;
+  }
+}
+
+function onPointerDown(event: PointerEvent) {
+  if (!containerRef.value) return;
+  const target = event.target as HTMLElement | null;
+  if (target?.closest(".point")) {
+    return;
+  }
+  dragCandidate.value = true;
+  isDragging.value = false;
+  dragStartX.value = event.clientX;
+  dragStartScrollLeft.value = containerRef.value.scrollLeft;
+  containerRef.value.setPointerCapture(event.pointerId);
+}
+
+function onPointerMove(event: PointerEvent) {
+  if (!dragCandidate.value || !containerRef.value) return;
+  const delta = event.clientX - dragStartX.value;
+  if (!isDragging.value && Math.abs(delta) > 3) {
+    isDragging.value = true;
+  }
+  if (!isDragging.value) return;
+  containerRef.value.scrollLeft = dragStartScrollLeft.value - delta;
+}
+
+function onPointerUp(event: PointerEvent) {
+  if (!containerRef.value) return;
+  dragCandidate.value = false;
+  isDragging.value = false;
+  containerRef.value.releasePointerCapture(event.pointerId);
 }
 
 onMounted(draw);
+watch(() => props.dates, () => {
+  hasInitialScroll.value = false;
+}, { deep: true });
 watch(() => [props.dates, props.modelValue, props.width, props.height], draw, { deep: true });
 </script>
 
 <template>
-  <svg ref="svgRef" :width="width" :height="height" />
+  <div
+    ref="containerRef"
+    class="no-scrollbar w-full overflow-x-auto overflow-y-hidden select-none cursor-grab active:cursor-grabbing"
+    @pointerdown="onPointerDown"
+    @pointermove="onPointerMove"
+    @pointerup="onPointerUp"
+    @pointercancel="onPointerUp"
+  >
+    <svg ref="svgRef" :height="height" />
+  </div>
 </template>
+
+<style scoped>
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+</style>

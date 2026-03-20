@@ -26,7 +26,6 @@ type StartOptions = {
 export function useMapDraw(mapRef: ShallowRef<MapLibreMap | null>) {
   const drawRef = shallowRef<MapboxDraw | null>(null);
   let currentCleanup: (() => void) | null = null;
-  let currentReject: ((reason?: unknown) => void) | null = null;
 
   function ensureMap(): MapLibreMap {
     const map = mapRef.value;
@@ -64,7 +63,6 @@ export function useMapDraw(mapRef: ShallowRef<MapLibreMap | null>) {
   function stop() {
     currentCleanup?.();
     currentCleanup = null;
-    currentReject = null;
 
     const map = mapRef.value;
     const draw = drawRef.value;
@@ -98,13 +96,10 @@ export function useMapDraw(mapRef: ShallowRef<MapLibreMap | null>) {
     const draw = ensureDraw(options);
 
     return new Promise<DrawResult>((resolve, reject) => {
-      currentReject = reject;
-
       const cleanup = () => {
         map.off("draw.create", onCreate);
         map.off("draw.modechange", onModeChange);
         currentCleanup = null;
-        currentReject = null;
       };
 
       const finish = (feature: DrawResult) => {

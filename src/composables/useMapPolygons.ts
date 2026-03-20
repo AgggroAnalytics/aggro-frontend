@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, watch, type ShallowRef, unref, type Ref } from "vue";
+import { onBeforeUnmount, watch, type ShallowRef, type Ref } from "vue";
 import type { Feature, FeatureCollection, Polygon } from "geojson";
 import type { LngLatBoundsLike, Map, FitBoundsOptions } from "maplibre-gl";
 

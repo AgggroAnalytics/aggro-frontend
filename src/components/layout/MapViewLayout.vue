@@ -72,20 +72,25 @@ onBeforeUnmount(() => {
 <template>
   <SidebarProvider>
     <Sidebar />
-    <SidebarInset>
-      <header class="px-4 py-1 border-y flex justify-between items-center">
+    <SidebarInset class="h-screen overflow-hidden">
+      <header class="shrink-0 px-4 py-1 border-y flex justify-between items-center">
         <SidebarTrigger class="-ml-1" />
         <div>
           <SelectCurrentOrganization />
         </div>
       </header>
-      <main class="w-full h-full grid grid-cols-[20vw_1fr]">
-        <div class="px-4 py-2">
+      <main class="w-full min-h-0 flex-1 overflow-hidden grid grid-cols-[40vw_1fr]">
+        <div class="min-h-0 overflow-y-auto px-4 py-2">
           <template v-if="styleReady && map">
             <slot />
           </template>
         </div>
-        <div id='map' ref="mapEl"></div>
+        <div class="relative min-h-0 h-full w-full">
+          <div id='map' ref="mapEl" class="h-full w-full"></div>
+          <div id="map-overlay-root" class="pointer-events-none absolute left-4 top-4 z-10">
+            <slot name="map-overlay" />
+          </div>
+        </div>
       </main>
     </SidebarInset>
   </SidebarProvider>

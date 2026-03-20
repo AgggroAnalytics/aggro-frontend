@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteFieldsByIdData, DeleteFieldsByIdResponses, DeleteSeasonsByIdData, DeleteSeasonsByIdResponses, GetFieldsByIdAnalyticsData, GetFieldsByIdAnalyticsResponses, GetFieldsByIdData, GetFieldsByIdErrors, GetFieldsByIdResponses, GetFieldsByIdTilesData, GetFieldsByIdTilesResponses, GetFieldsByIdWorkflowsData, GetFieldsByIdWorkflowsErrors, GetFieldsByIdWorkflowsResponses, GetFieldsData, GetFieldsErrors, GetFieldsResponses, GetHealthzData, GetHealthzResponses, GetOrganizationsData, GetOrganizationsResponses, GetS3ByPathData, GetS3ByPathErrors, GetS3ByPathResponses, GetSeasonsByIdData, GetSeasonsByIdResponses, GetSeasonsData, GetSeasonsResponses, GetTilesByIdMetricsData, GetTilesByIdMetricsErrors, GetTilesByIdMetricsResponses, PostFieldsByIdAnalyticsJobsData, PostFieldsByIdAnalyticsJobsErrors, PostFieldsByIdAnalyticsJobsResponses, PostFieldsByIdBuildPmtilesData, PostFieldsByIdBuildPmtilesResponses, PostFieldsData, PostFieldsErrors, PostFieldsResponses, PostOrganizationsByIdInviteData, PostOrganizationsByIdInviteResponses, PostOrganizationsData, PostOrganizationsResponses, PostSeasonsData, PostSeasonsResponses, PutFieldsByIdData, PutFieldsByIdResponses, PutSeasonsByIdData, PutSeasonsByIdResponses } from './types.gen';
+import type { DeleteFieldsByIdData, DeleteFieldsByIdResponses, DeleteSeasonsByIdData, DeleteSeasonsByIdResponses, GetFieldsByIdAnalyticsData, GetFieldsByIdAnalyticsResponses, GetFieldsByIdData, GetFieldsByIdErrors, GetFieldsByIdProcessingDatesData, GetFieldsByIdProcessingDatesResponses, GetFieldsByIdResponses, GetFieldsByIdTilesData, GetFieldsByIdTilesResponses, GetFieldsByIdWorkflowsData, GetFieldsByIdWorkflowsErrors, GetFieldsByIdWorkflowsResponses, GetFieldsData, GetFieldsErrors, GetFieldsResponses, GetHealthzData, GetHealthzResponses, GetOrganizationsData, GetOrganizationsResponses, GetS3ByPathData, GetS3ByPathErrors, GetS3ByPathResponses, GetSeasonsByIdData, GetSeasonsByIdResponses, GetSeasonsData, GetSeasonsResponses, GetTilesByIdMetricsData, GetTilesByIdMetricsErrors, GetTilesByIdMetricsResponses, PostFieldsByIdAnalyticsJobsData, PostFieldsByIdAnalyticsJobsErrors, PostFieldsByIdAnalyticsJobsResponses, PostFieldsByIdBuildPmtilesData, PostFieldsByIdBuildPmtilesResponses, PostFieldsByIdResultsDeleteData, PostFieldsByIdResultsDeleteResponses, PostFieldsByIdWorkflowsData, PostFieldsByIdWorkflowsErrors, PostFieldsByIdWorkflowsResponses, PostFieldsData, PostFieldsErrors, PostFieldsResponses, PostOrganizationsByIdInviteData, PostOrganizationsByIdInviteResponses, PostOrganizationsData, PostOrganizationsResponses, PostSeasonsData, PostSeasonsResponses, PutFieldsByIdData, PutFieldsByIdResponses, PutSeasonsByIdData, PutSeasonsByIdResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -106,6 +106,49 @@ export const getFieldsByIdWorkflows = <ThrowOnError extends boolean = false>(opt
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/fields/{id}/workflows',
     ...options
+});
+
+/**
+ * Start field processing workflow (Temporal)
+ *
+ * Starts `FieldProcessingWorkflow` with canonical `workflow_id = field-{field_id}`.
+ * The workflow itself cuts tiles, computes metrics, runs ML and finalizes DB write.
+ *
+ */
+export const postFieldsByIdWorkflows = <ThrowOnError extends boolean = false>(options: Options<PostFieldsByIdWorkflowsData, ThrowOnError>) => (options.client ?? client).post<PostFieldsByIdWorkflowsResponses, PostFieldsByIdWorkflowsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/fields/{id}/workflows',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Current season dates with processed flags
+ *
+ * Returns all dates in current season and whether each date already has field analytics.
+ * If no season covers today, the latest season is used.
+ *
+ */
+export const getFieldsByIdProcessingDates = <ThrowOnError extends boolean = false>(options: Options<GetFieldsByIdProcessingDatesData, ThrowOnError>) => (options.client ?? client).get<GetFieldsByIdProcessingDatesResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/fields/{id}/processing-dates',
+    ...options
+});
+
+/**
+ * Delete processed results for selected dates
+ */
+export const postFieldsByIdResultsDelete = <ThrowOnError extends boolean = false>(options: Options<PostFieldsByIdResultsDeleteData, ThrowOnError>) => (options.client ?? client).post<PostFieldsByIdResultsDeleteResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/fields/{id}/results/delete',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**

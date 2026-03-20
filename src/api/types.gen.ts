@@ -115,12 +115,30 @@ export type FieldAnalyticsRow = {
     ndvi_mean?: number | null;
     ndmi_mean?: number | null;
     ndre_mean?: number | null;
+    gndvi_mean?: number | null;
+    msavi_mean?: number | null;
+    nbr2_mean?: number | null;
+    bare_soil_index_mean?: number | null;
     valid_pixel_ratio_mean?: number | null;
     stress_index_mean?: number | null;
     temperature_c_mean?: number | null;
     precipitation_mm_3d_mean?: number | null;
     precipitation_mm_7d_mean?: number | null;
     precipitation_mm_30d_mean?: number | null;
+    /**
+     * Degradation heterogeneity (predicted rows)
+     */
+    heterogeneity_score?: number | null;
+    prediction_degradation_score?: number | null;
+    prediction_vegetation_cover_loss_score?: number | null;
+    prediction_bare_soil_expansion_score?: number | null;
+    prediction_health_score?: number | null;
+    prediction_stress_score_total?: number | null;
+    prediction_water_stress?: number | null;
+    prediction_confidence?: number | null;
+    prediction_under_irrigation_risk_score?: number | null;
+    prediction_over_irrigation_risk_score?: number | null;
+    prediction_uniformity_score?: number | null;
     created_at?: string;
 };
 
@@ -377,6 +395,95 @@ export type GetFieldsByIdWorkflowsResponses = {
 };
 
 export type GetFieldsByIdWorkflowsResponse = GetFieldsByIdWorkflowsResponses[keyof GetFieldsByIdWorkflowsResponses];
+
+export type PostFieldsByIdWorkflowsData = {
+    body?: {
+        from_date?: string;
+        to_date?: string;
+        year?: number;
+        observation_dates?: Array<string>;
+        ml_modules?: Array<'m0' | 'm1' | 'm2'>;
+    };
+    path: {
+        id: string;
+    };
+    query?: {
+        year?: number;
+    };
+    url: '/fields/{id}/workflows';
+};
+
+export type PostFieldsByIdWorkflowsErrors = {
+    /**
+     * User not in field organization
+     */
+    403: unknown;
+    /**
+     * Temporal start error
+     */
+    502: unknown;
+    /**
+     * Temporal not configured on API
+     */
+    503: unknown;
+};
+
+export type PostFieldsByIdWorkflowsResponses = {
+    202: {
+        status?: string;
+        field_id?: string;
+        workflow_id?: string;
+        run_id?: string;
+        workflow_type?: string;
+    };
+};
+
+export type PostFieldsByIdWorkflowsResponse = PostFieldsByIdWorkflowsResponses[keyof PostFieldsByIdWorkflowsResponses];
+
+export type GetFieldsByIdProcessingDatesData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/fields/{id}/processing-dates';
+};
+
+export type GetFieldsByIdProcessingDatesResponses = {
+    200: {
+        field_id?: string;
+        season_id?: string;
+        season_name?: string;
+        season_start?: string;
+        season_end?: string;
+        processing_dates?: Array<{
+            date?: string;
+            processed?: boolean;
+        }>;
+    };
+};
+
+export type GetFieldsByIdProcessingDatesResponse = GetFieldsByIdProcessingDatesResponses[keyof GetFieldsByIdProcessingDatesResponses];
+
+export type PostFieldsByIdResultsDeleteData = {
+    body: {
+        dates: Array<string>;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/fields/{id}/results/delete';
+};
+
+export type PostFieldsByIdResultsDeleteResponses = {
+    200: {
+        status?: string;
+        dates?: Array<string>;
+    };
+};
+
+export type PostFieldsByIdResultsDeleteResponse = PostFieldsByIdResultsDeleteResponses[keyof PostFieldsByIdResultsDeleteResponses];
 
 export type PostFieldsByIdAnalyticsJobsData = {
     body?: never;

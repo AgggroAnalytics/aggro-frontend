@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { keycloak } from '../auth/keycloak';
 import { getOrganizations } from '../api/sdk.gen';
 import { useQuery } from '@tanstack/vue-query';
