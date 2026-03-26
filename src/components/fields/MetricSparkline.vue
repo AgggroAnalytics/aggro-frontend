@@ -99,7 +99,7 @@ const predictedIsConstant = computed(() => {
 const forecastExplanation = computed(() => {
   if (!predictedIsConstant.value || props.predicted.length < 2) return '';
   const v = props.predicted[0]!.value;
-  return `Среднее по полю ${formatNum(v)} повторяется на каждую дату: в одном прогоне workflow ML даёт один набор оценок на тайл, без привязки к конкретной дате ряда.`;
+  return `Среднее по полю ${formatNum(v)} повторяется на каждую дату: за один прогон обработки модель даёт один набор оценок на тайл, без привязки к конкретной дате ряда.`;
 });
 </script>
 

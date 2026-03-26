@@ -1,6 +1,6 @@
 <template>
   <MainLayout>
-    gjkdsfhglkjsd
+    <p class="text-slate-600">Выберите раздел в меню слева.</p>
   </MainLayout>
 </template>
 

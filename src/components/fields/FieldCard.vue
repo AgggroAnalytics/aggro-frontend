@@ -14,10 +14,10 @@
     </div>
     <div />
     <div class="flex items-center gap-1">
-      <Button variant="outline" @click="emit('fitTo')">
+      <Button variant="outline" title="Показать на карте" @click="emit('fitTo')">
         <MapPin />
       </Button>
-      <Button variant="outline" @click="emit('enter')">
+      <Button variant="outline" title="Открыть поле" @click="emit('enter')">
         <SquareArrowRightEnter />
       </Button>
     </div>

@@ -56,7 +56,7 @@
           </Select>
         </div>
         <Button :disabled="pendingDates.length === 0 || startProcessingMutation.isPending.value" @click="startWorkflowForYear">
-          Запустить workflow
+          Запустить обработку
         </Button>
       </div>
       <div class="rounded-lg border bg-slate-50 p-3">
@@ -123,11 +123,11 @@
       </button>
       <div v-show="sectionOpen.charts" class="border-t border-slate-100 px-4 pb-4 pt-3">
       <p class="mb-3 text-xs text-slate-600">
-        Синяя линия — агрегаты по тайлам в БД для наблюдаемых дат. Оранжевая пунктир — средние ML-метрик по тайлам, записанные финализатором workflow в строки аналитики с источником «predicted».
+        Графики показывают только наблюдаемые значения во времени.
       </p>
       <div class="grid gap-3 sm:grid-cols-2">
         <MetricSparkline
-          v-for="m in metricCatalog"
+          v-for="m in chartMetrics"
           :key="m.key"
           :title="m.label"
           :observed="observedChartByMetric[m.key] ?? []"
@@ -141,15 +141,44 @@
       <button
         type="button"
         class="flex w-full items-center gap-2 p-4 text-left hover:bg-slate-50/90"
+        :aria-expanded="sectionOpen.mlSummary"
+        aria-label="Свернуть или развернуть сводку машинного обучения"
+        @click="sectionOpen.mlSummary = !sectionOpen.mlSummary"
+      >
+        <ChevronDown
+          class="size-5 shrink-0 text-slate-500 transition-transform duration-200"
+          :class="sectionOpen.mlSummary ? '' : '-rotate-90'"
+        />
+        <h2 class="text-lg font-semibold text-slate-900">Сводка прогноза (последняя обработка)</h2>
+      </button>
+      <div v-show="sectionOpen.mlSummary" class="border-t border-slate-100 px-4 pb-4 pt-3">
+        <p v-if="!mlSummaryItems.length" class="text-sm text-slate-500">Нет агрегированных значений модели.</p>
+        <div v-else class="grid gap-2 sm:grid-cols-2">
+          <div
+            v-for="item in mlSummaryItems"
+            :key="item.key"
+            class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+          >
+            <div class="text-slate-600">{{ item.label }}</div>
+            <div class="font-semibold text-slate-900">{{ item.value }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-xl border bg-white/90 shadow-sm">
+      <button
+        type="button"
+        class="flex w-full items-center gap-2 p-4 text-left hover:bg-slate-50/90"
         :aria-expanded="sectionOpen.history"
-        aria-label="Свернуть или развернуть историю workflow"
+        aria-label="Свернуть или развернуть историю обработок"
         @click="sectionOpen.history = !sectionOpen.history"
       >
         <ChevronDown
           class="size-5 shrink-0 text-slate-500 transition-transform duration-200"
           :class="sectionOpen.history ? '' : '-rotate-90'"
         />
-        <h2 class="text-lg font-semibold text-slate-900">История workflow</h2>
+        <h2 class="text-lg font-semibold text-slate-900">История обработок</h2>
       </button>
       <div v-show="sectionOpen.history" class="border-t border-slate-100 px-4 pb-4 pt-3">
       <div class="overflow-x-auto">
@@ -192,7 +221,7 @@
               </td>
             </tr>
             <tr v-if="!workflowRuns.length">
-              <td colspan="4" class="py-4 text-sm text-slate-500">Пока нет запусков workflow</td>
+              <td colspan="4" class="py-4 text-sm text-slate-500">Пока нет запусков обработки</td>
             </tr>
           </tbody>
         </table>
@@ -201,7 +230,7 @@
     </section>
 
     <Teleport to="#map-overlay-root">
-      <div class="pointer-events-auto w-[calc(100%-8px)] space-y-2 rounded-xl border bg-white/95 p-3 shadow-lg">
+      <div class="pointer-events-auto w-full min-w-0 max-w-full space-y-2 rounded-xl border bg-white/95 p-3 shadow-lg">
         <div class="flex items-center gap-2">
           <span class="text-xs font-medium text-slate-600">Метрика:</span>
           <Select :model-value="selectedMetric" @update:model-value="onMetricChange">
@@ -218,9 +247,23 @@
               </SelectGroup>
             </SelectContent>
           </Select>
-          <span class="text-xs text-slate-500">Дата: {{ selectedTimelineDate ?? '—' }}</span>
+          <span class="text-xs text-slate-500">Наблюдение: {{ selectedTimelineDate ?? '—' }}</span>
+          <div v-if="resolveMetricTarget(selectedMetric).kind === 'prediction'" class="flex items-center gap-2">
+            <span class="text-xs text-slate-500">Прогноз (as-of):</span>
+            <Select :model-value="selectedPredictedDate ?? ''" @update:model-value="onPredictedDateChange">
+              <SelectTrigger class="h-8 w-40">
+                <SelectValue placeholder="Выберите дату" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="d in predictedPmtilesDates" :key="d" :value="d">
+                  {{ d }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <TimelinePicker :dates="timelineDates" :model-value="timelineModelDate" :height="72" @update:model-value="onTimelineChange" />
+        <MapMetricLegend :pmtiles-url="selectedPmtilesUrl" :metric-field="selectedMetric" />
       </div>
     </Teleport>
   </div>
@@ -230,9 +273,10 @@
 import { getFieldsById, getFieldsByIdAnalytics, getFieldsByIdWorkflows, type FieldAnalyticsRow, type FieldWorkflowRun } from '@/api';
 import { client } from '@/api/client.gen';
 import { useMapPolygons } from '@/composables/useMapPolygons';
-import { usePmtilesRenderer } from '@/composables/usePmtilesRenderer';
+import { PMTILES_CATEGORICAL_METRIC_KEYS, usePmtilesRenderer } from '@/composables/usePmtilesRenderer';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { ChevronDown } from 'lucide-vue-next';
+import { PMTiles } from 'pmtiles';
 import { computed, inject, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import {
@@ -253,6 +297,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import MapMetricLegend from './MapMetricLegend.vue';
 import MetricSparkline from './MetricSparkline.vue';
 import TimelinePicker from './TimelinePicker.vue';
 
@@ -265,9 +310,9 @@ type WorkflowStep = {
 
 const workflowSteps: WorkflowStep[] = [
   { number: 1, title: 'Нарезка тайлов', description: 'Геометрия поля разбивается на рабочие сегменты.', stageKeys: ['cut_tiles', 'tiles'] },
-  { number: 2, title: 'Geo метрики', description: 'Сбор спутниковых и погодных признаков.', stageKeys: ['geo_metrics', 'gee'] },
-  { number: 3, title: 'ML аналитика', description: 'Расчеты моделей по тайлам и временным рядам.', stageKeys: ['ml_analytics', 'ml'] },
-  { number: 4, title: 'PMTiles', description: 'Формирование артефактов для визуализации.', stageKeys: ['parallel', 'pmtiles'] },
+  { number: 2, title: 'Спутник и погода', description: 'Сбор спутниковых и погодных признаков.', stageKeys: ['geo_metrics', 'gee'] },
+  { number: 3, title: 'Модели и прогноз', description: 'Расчёты моделей по тайлам и временным рядам.', stageKeys: ['ml_analytics', 'ml'] },
+  { number: 4, title: 'Тайлы карты', description: 'Формирование векторных тайлов для отображения на карте.', stageKeys: ['parallel', 'pmtiles'] },
   { number: 5, title: 'Финализация', description: 'Сохранение агрегатов в базу данных.', stageKeys: ['finalize_db', 'db', 'completed', 'complete'] },
 ];
 
@@ -278,6 +323,7 @@ const sectionOpen = reactive({
   overview: true,
   processing: true,
   charts: true,
+  mlSummary: true,
   history: true,
 });
 
@@ -294,6 +340,7 @@ const currentFieldQuery = useQuery({
 const currentField = computed(() => currentFieldQuery.data.value?.data);
 const launchError = ref<string | null>(null);
 const selectedTimelineDate = ref<string | null>(null);
+const selectedPredictedDate = ref<string | null>(null);
 const selectedMetric = ref<string>('ndvi');
 const selectedYear = ref(new Date().getFullYear());
 const selectedDatesToDelete = ref<string[]>([]);
@@ -302,30 +349,56 @@ const yearOptions = computed(() => {
   return [current, current - 1];
 });
 
-const metricCatalog = [
-  { key: 'ndvi', label: 'NDVI', group: 'Наблюдаемые (спутник/погода)' },
-  { key: 'ndmi', label: 'NDMI', group: 'Наблюдаемые (спутник/погода)' },
-  { key: 'ndre', label: 'NDRE', group: 'Наблюдаемые (спутник/погода)' },
-  { key: 'gndvi', label: 'GNDVI', group: 'Наблюдаемые (спутник/погода)' },
-  { key: 'msavi', label: 'MSAVI', group: 'Наблюдаемые (спутник/погода)' },
-  { key: 'nbr2', label: 'NBR2', group: 'Наблюдаемые (спутник/погода)' },
+/** chartable: false — только слой карты (PMTiles), строковые enum из ML-контракта. */
+type MetricItem = {
+  key: string;
+  label: string;
+  group: string;
+  chartable?: boolean;
+};
+
+const metricCatalog: MetricItem[] = [
+  { key: 'ndvi', label: 'Индекс NDVI (вегетация)', group: 'Наблюдаемые (спутник/погода)' },
+  { key: 'ndmi', label: 'Индекс NDMI (влажность растительности)', group: 'Наблюдаемые (спутник/погода)' },
+  { key: 'ndre', label: 'Индекс NDRE (хлорофилл)', group: 'Наблюдаемые (спутник/погода)' },
+  { key: 'gndvi', label: 'Индекс GNDVI', group: 'Наблюдаемые (спутник/погода)' },
+  { key: 'msavi', label: 'Индекс MSAVI', group: 'Наблюдаемые (спутник/погода)' },
+  { key: 'nbr2', label: 'Индекс NBR2 (почва/гарь)', group: 'Наблюдаемые (спутник/погода)' },
   { key: 'bare_soil_index', label: 'Индекс оголенной почвы', group: 'Наблюдаемые (спутник/погода)' },
   { key: 'valid_pixel_ratio', label: 'Доля валидных пикселей', group: 'Наблюдаемые (спутник/погода)' },
   { key: 'temperature_c_mean', label: 'Средняя температура, °C', group: 'Наблюдаемые (спутник/погода)' },
   { key: 'precipitation_mm_3d', label: 'Осадки за 3 дня, мм', group: 'Наблюдаемые (спутник/погода)' },
   { key: 'precipitation_mm_7d', label: 'Осадки за 7 дней, мм', group: 'Наблюдаемые (спутник/погода)' },
   { key: 'precipitation_mm_30d', label: 'Осадки за 30 дней, мм', group: 'Наблюдаемые (спутник/погода)' },
-  { key: 'degradation_score', label: 'Скор деградации', group: 'Прогноз: деградация' },
-  { key: 'health_score', label: 'Скор здоровья', group: 'Прогноз: здоровье/стресс' },
+  { key: 'degradation_score', label: 'Оценка деградации', group: 'Прогноз: деградация' },
+  { key: 'degradation_class', label: 'Класс деградации (категория)', group: 'Прогноз: деградация', chartable: false },
+  { key: 'health_score', label: 'Оценка состояния (здоровье)', group: 'Прогноз: здоровье/стресс' },
   { key: 'stress_score_total', label: 'Суммарный стресс', group: 'Прогноз: здоровье/стресс' },
   { key: 'water_stress', label: 'Водный стресс', group: 'Прогноз: здоровье/стресс' },
+  { key: 'vegetation_activity_drop', label: 'Падение вегетации (модуль 1)', group: 'Прогноз: здоровье/стресс' },
+  { key: 'heterogeneity_growth', label: 'Рост неоднородности (модуль 1)', group: 'Прогноз: здоровье/стресс' },
   { key: 'confidence', label: 'Уверенность модели', group: 'Прогноз: полив' },
-  { key: 'under_irrigation_risk_score', label: 'Риск недополива', group: 'Прогноз: полив' },
-  { key: 'over_irrigation_risk_score', label: 'Риск переполива', group: 'Прогноз: полив' },
-  { key: 'uniformity_score', label: 'Равномерность полива', group: 'Прогноз: полив' },
-] as const;
+  { key: 'forecast_projected_score_m0', label: 'Forecast m0: прогнозируемый скор (14д)', group: 'Прогноз: short-horizon forecast' },
+  { key: 'forecast_confidence_m0', label: 'Forecast m0: уверенность', group: 'Прогноз: short-horizon forecast' },
+  { key: 'forecast_direction_m0', label: 'Forecast m0: направление (категория)', group: 'Прогноз: short-horizon forecast', chartable: false },
+  { key: 'forecast_projected_score_m1', label: 'Forecast m1: прогнозируемый скор (14д)', group: 'Прогноз: short-horizon forecast' },
+  { key: 'forecast_confidence_m1', label: 'Forecast m1: уверенность', group: 'Прогноз: short-horizon forecast' },
+  { key: 'forecast_direction_m1', label: 'Forecast m1: направление (категория)', group: 'Прогноз: short-horizon forecast', chartable: false },
+  { key: 'forecast_projected_score_m2', label: 'Forecast m2: прогнозируемый скор (14д)', group: 'Прогноз: short-horizon forecast' },
+  { key: 'forecast_confidence_m2', label: 'Forecast m2: уверенность', group: 'Прогноз: short-horizon forecast' },
+  { key: 'forecast_direction_m2', label: 'Forecast m2: направление (категория)', group: 'Прогноз: short-horizon forecast', chartable: false },
+  { key: 'irrigation_events_detected', label: 'Число событий орошения', group: 'Прогноз: полив' },
+  { key: 'irrigation_status', label: 'Статус орошения (категория)', group: 'Прогноз: полив', chartable: false },
+  { key: 'water_balance_risk', label: 'Риск водного баланса (категория)', group: 'Прогноз: полив', chartable: false },
+  { key: 'trend', label: 'Тренд (категория)', group: 'Прогноз: общее', chartable: false },
+  { key: 'alert_level', label: 'Уровень тревоги (категория)', group: 'Прогноз: общее', chartable: false },
+];
 
-const observedAnalyticsColumn: Partial<Record<(typeof metricCatalog)[number]['key'], keyof FieldAnalyticsRow>> = {
+const chartMetrics = computed(() =>
+  metricCatalog.filter((m) => observedAnalyticsColumn[m.key] !== undefined),
+);
+
+const observedAnalyticsColumn: Partial<Record<MetricItem['key'], keyof FieldAnalyticsRow>> = {
   ndvi: 'ndvi_mean',
   ndmi: 'ndmi_mean',
   ndre: 'ndre_mean',
@@ -340,25 +413,16 @@ const observedAnalyticsColumn: Partial<Record<(typeof metricCatalog)[number]['ke
   precipitation_mm_30d: 'precipitation_mm_30d_mean',
 };
 
-const predictedAnalyticsColumn: Partial<Record<(typeof metricCatalog)[number]['key'], keyof FieldAnalyticsRow>> = {
+const predictedAnalyticsColumn: Partial<Record<MetricItem['key'], keyof FieldAnalyticsRow>> = {
   degradation_score: 'prediction_degradation_score',
   health_score: 'prediction_health_score',
   stress_score_total: 'prediction_stress_score_total',
   water_stress: 'prediction_water_stress',
+  vegetation_activity_drop: 'prediction_vegetation_activity_drop',
+  heterogeneity_growth: 'prediction_heterogeneity_growth',
   confidence: 'prediction_confidence',
-  under_irrigation_risk_score: 'prediction_under_irrigation_risk_score',
-  over_irrigation_risk_score: 'prediction_over_irrigation_risk_score',
-  uniformity_score: 'prediction_uniformity_score',
+  irrigation_events_detected: 'prediction_irrigation_events_detected',
 };
-
-const groupedMetrics = computed(() => {
-  const groups = new Map<string, string[]>();
-  for (const metric of metricCatalog) {
-    if (!groups.has(metric.group)) groups.set(metric.group, []);
-    groups.get(metric.group)!.push(metric.key);
-  }
-  return Array.from(groups.entries()).map(([title, metrics]) => ({ title, metrics }));
-});
 
 const workflowsQuery = useQuery({
   queryKey: ['fieldWorkflows', fieldId],
@@ -395,11 +459,123 @@ const analyticsQuery = useQuery({
   queryFn: ({ queryKey }) => getFieldsByIdAnalytics({ path: { id: queryKey[1] as string } }),
 });
 
+/** Per-URL attribute names from PMTiles tilestats (null = loading for current date). */
+const pmtilesAttrsByUrl = ref<Map<string, Set<string>> | null>(null);
+
+async function refreshPmtilesAttrs() {
+  const date = selectedTimelineDate.value;
+  const predictionDate = selectedPredictedDate.value;
+  const pmtiles = analyticsQuery.data.value?.data?.pmtiles ?? [];
+  if (!date && !predictionDate) {
+    pmtilesAttrsByUrl.value = null;
+    return;
+  }
+  const observedUrls = [
+    ...new Set(
+      pmtiles
+        .filter((p) => date && p.analysis_date === date && p.pmtiles_url && p.analysis_kind !== 'prediction')
+        .map((p) => toBrowserReachablePmtilesUrl(p.pmtiles_url))
+        .filter((u): u is string => Boolean(u)),
+    ),
+  ];
+  const predictionUrls = [
+    ...new Set(
+      pmtiles
+        .filter((p) => p.analysis_kind === 'prediction' && p.pmtiles_url && (!predictionDate || p.analysis_date === predictionDate))
+        .map((p) => toBrowserReachablePmtilesUrl(p.pmtiles_url))
+        .filter((u): u is string => Boolean(u)),
+    ),
+  ];
+  const urls = [...new Set([...observedUrls, ...predictionUrls])];
+  if (!urls.length) {
+    pmtilesAttrsByUrl.value = new Map();
+    return;
+  }
+  pmtilesAttrsByUrl.value = null;
+  const next = new Map<string, Set<string>>();
+  await Promise.all(
+    urls.map(async (url) => {
+      try {
+        const pm = new PMTiles(url);
+        const meta = (await pm.getMetadata()) as {
+          tilestats?: { layers?: Array<{ layer?: string; attributes?: Array<{ attribute?: string }> }> };
+        };
+        const layers = meta.tilestats?.layers ?? [];
+        const layer = layers.find((l) => l.layer === 'tiles') ?? layers[0];
+        const names = new Set(
+          (layer?.attributes ?? []).map((a) => a.attribute).filter((x): x is string => Boolean(x)),
+        );
+        next.set(url, names);
+      } catch {
+        next.set(url, new Set());
+      }
+    }),
+  );
+  pmtilesAttrsByUrl.value = next;
+}
+
+watch(
+  [selectedTimelineDate, selectedPredictedDate, () => analyticsQuery.data.value?.data?.pmtiles],
+  () => {
+    void refreshPmtilesAttrs();
+  },
+  { immediate: true, deep: true },
+);
+
+const availableMapMetricKeys = computed(() => {
+  const date = selectedTimelineDate.value;
+  const pmtiles = analyticsQuery.data.value?.data?.pmtiles ?? [];
+  const attrsMap = pmtilesAttrsByUrl.value;
+  if (!date) return new Set(metricCatalog.map((m) => m.key));
+  if (attrsMap === null) return new Set(metricCatalog.map((m) => m.key));
+  const keys: string[] = [];
+  for (const m of metricCatalog) {
+    const hit = pickPmtilesForMetric(pmtiles, date, m.key, attrsMap, selectedPredictedDate.value);
+    if (!hit?.pmtiles_url) continue;
+    const url = toBrowserReachablePmtilesUrl(hit.pmtiles_url);
+    if (!url) continue;
+    const attrs = attrsMap.get(url);
+    if (PMTILES_CATEGORICAL_METRIC_KEYS.has(m.key)) {
+      if (!attrs || attrs.size === 0) keys.push(m.key);
+      else if (attrs.has(m.key)) keys.push(m.key);
+      continue;
+    }
+    if (!attrs || attrs.size === 0) continue;
+    if (attrs.has(m.key)) keys.push(m.key);
+  }
+  return new Set(keys);
+});
+
+const groupedMetrics = computed(() => {
+  const allowed = availableMapMetricKeys.value;
+  const groups = new Map<string, string[]>();
+  for (const metric of metricCatalog) {
+    if (!allowed.has(metric.key)) continue;
+    if (!groups.has(metric.group)) groups.set(metric.group, []);
+    groups.get(metric.group)!.push(metric.key);
+  }
+  return Array.from(groups.entries())
+    .filter(([, metrics]) => metrics.length > 0)
+    .map(([title, metrics]) => ({ title, metrics }));
+});
+
+watch(
+  availableMapMetricKeys,
+  (allowed) => {
+    if (!allowed.size) return;
+    if (!allowed.has(selectedMetric.value)) {
+      const first = metricCatalog.find((m) => allowed.has(m.key));
+      if (first) selectedMetric.value = first.key;
+    }
+  },
+  { immediate: true },
+);
+
 const observedChartByMetric = computed(() => {
   const yearPrefix = String(selectedYear.value);
   const rows = analyticsQuery.data.value?.data?.analytics ?? [];
   const out: Record<string, Array<{ date: string; value: number }>> = {};
-  for (const item of metricCatalog) {
+  for (const item of chartMetrics.value) {
     const key = item.key;
     out[key] = [];
     const col = observedAnalyticsColumn[key];
@@ -426,14 +602,14 @@ const predictedChartByMetric = computed(() => {
     (r) => r.source === 'predicted' && r.observation_date?.startsWith(yearPrefix),
   );
   const out: Record<string, Array<{ date: string; value: number }>> = {};
-  for (const item of metricCatalog) {
+  for (const item of chartMetrics.value) {
     out[item.key] = [];
   }
   for (const row of predRows) {
     const od = row.observation_date;
     if (!od) continue;
     const date = od.slice(0, 10);
-    for (const item of metricCatalog) {
+    for (const item of chartMetrics.value) {
       const key = item.key;
       const col = predictedAnalyticsColumn[key];
       if (!col) continue;
@@ -442,10 +618,43 @@ const predictedChartByMetric = computed(() => {
       out[key]!.push({ date, value: raw });
     }
   }
-  for (const item of metricCatalog) {
+  for (const item of chartMetrics.value) {
     out[item.key]!.sort((a, b) => a.date.localeCompare(b.date));
   }
   return out;
+});
+
+const latestPredictedRow = computed(() => {
+  const rows = analyticsQuery.data.value?.data?.analytics ?? [];
+  const predicted = rows.filter((r) => r.source === 'predicted' && !!r.observation_date);
+  predicted.sort((a, b) => (a.observation_date ?? '').localeCompare(b.observation_date ?? ''));
+  return predicted[predicted.length - 1];
+});
+
+function formatSummaryValue(v: unknown): string {
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    return Math.abs(v - Math.round(v)) < 1e-6 ? String(Math.round(v)) : v.toFixed(2);
+  }
+  if (typeof v === 'string' && v.trim() !== '') return v;
+  return '—';
+}
+
+const mlSummaryItems = computed(() => {
+  const row = latestPredictedRow.value;
+  if (!row) return [] as Array<{ key: string; label: string; value: string }>;
+  const items = [
+    { key: 'prediction_degradation_score', label: 'Оценка деградации', raw: row.prediction_degradation_score },
+    { key: 'prediction_health_score', label: 'Оценка состояния (здоровье)', raw: row.prediction_health_score },
+    { key: 'prediction_stress_score_total', label: 'Суммарный стресс', raw: row.prediction_stress_score_total },
+    { key: 'prediction_water_stress', label: 'Водный стресс', raw: row.prediction_water_stress },
+    { key: 'prediction_vegetation_activity_drop', label: 'Падение вегетации (модуль 1)', raw: row.prediction_vegetation_activity_drop },
+    { key: 'prediction_heterogeneity_growth', label: 'Рост неоднородности (модуль 1)', raw: row.prediction_heterogeneity_growth },
+    { key: 'prediction_confidence', label: 'Уверенность модели', raw: row.prediction_confidence },
+    { key: 'prediction_irrigation_events_detected', label: 'Число событий орошения', raw: row.prediction_irrigation_events_detected },
+  ];
+  return items
+    .filter((x) => x.raw !== null && x.raw !== undefined)
+    .map((x) => ({ key: x.key, label: x.label, value: formatSummaryValue(x.raw) }));
 });
 
 const startProcessingMutation = useMutation({
@@ -553,9 +762,15 @@ const { fitTo } = useMapPolygons(map!.map, polys);
 const timelineDates = computed(() => {
   const processed = processedDateSet.value;
   const analyticDates =
-    analyticsQuery.data.value?.data?.analytics?.map((row) => row.observation_date).filter((d): d is string => Boolean(d)) ?? [];
+    analyticsQuery.data.value?.data?.analytics
+      ?.filter((row) => row.source !== 'predicted')
+      .map((row) => row.observation_date)
+      .filter((d): d is string => Boolean(d)) ?? [];
   const artifactDates =
-    analyticsQuery.data.value?.data?.pmtiles?.map((row) => row.analysis_date).filter((d): d is string => Boolean(d)) ?? [];
+    analyticsQuery.data.value?.data?.pmtiles
+      ?.filter((row) => row.analysis_kind !== 'prediction')
+      .map((row) => row.analysis_date)
+      .filter((d): d is string => Boolean(d)) ?? [];
   const merged = Array.from(new Set([...analyticDates, ...artifactDates]));
   return merged
     .filter((date) => processed.has(date))
@@ -563,11 +778,27 @@ const timelineDates = computed(() => {
 });
 const timelineModelDate = computed(() => selectedTimelineDate.value ? new Date(`${selectedTimelineDate.value}T00:00:00Z`) : null);
 
+const predictedPmtilesDates = computed(() => {
+  const pmtiles = analyticsQuery.data.value?.data?.pmtiles ?? [];
+  const dates = pmtiles
+    .filter((row) => row.analysis_kind === 'prediction' && !!row.analysis_date)
+    .map((row) => row.analysis_date)
+    .filter((d): d is string => Boolean(d));
+  return Array.from(new Set(dates)).sort((a, b) => b.localeCompare(a));
+});
+
 const selectedPmtilesUrl = computed(() => {
-  const date = selectedTimelineDate.value;
+  const metricTarget = resolveMetricTarget(selectedMetric.value);
+  const date = metricTarget.kind === 'prediction' ? selectedPredictedDate.value : selectedTimelineDate.value;
   const pmtiles = analyticsQuery.data.value?.data?.pmtiles ?? [];
   if (!date) return null;
-  const hit = pickPmtilesForMetric(pmtiles, date, selectedMetric.value);
+  const hit = pickPmtilesForMetric(
+    pmtiles,
+    date,
+    selectedMetric.value,
+    pmtilesAttrsByUrl.value,
+    selectedPredictedDate.value,
+  );
   return toBrowserReachablePmtilesUrl(hit?.pmtiles_url ?? null);
 });
 
@@ -596,6 +827,16 @@ watch(timelineDates, (dates) => {
   if (!selectedTimelineDate.value || !isoDates.has(selectedTimelineDate.value)) {
     const last = dates[dates.length - 1];
     selectedTimelineDate.value = last.toISOString().slice(0, 10);
+  }
+}, { immediate: true });
+
+watch(predictedPmtilesDates, (dates) => {
+  if (!dates.length) {
+    selectedPredictedDate.value = null;
+    return;
+  }
+  if (!selectedPredictedDate.value || !dates.includes(selectedPredictedDate.value)) {
+    selectedPredictedDate.value = dates[0];
   }
 }, { immediate: true });
 
@@ -647,27 +888,85 @@ function pickPmtilesForMetric(
   artifacts: Array<{ analysis_date?: string; analysis_kind?: 'observed' | 'prediction'; module?: string; pmtiles_url?: string }>,
   date: string,
   metric: string,
+  attributeByUrl?: Map<string, Set<string>> | null,
+  predictionDate?: string | null,
 ) {
   const metricTarget = resolveMetricTarget(metric);
   const byDate = artifacts.filter((item) => item.analysis_date === date);
-  if (!byDate.length) return undefined;
+  const observedForDate = byDate.filter((item) => item.analysis_kind !== 'prediction');
 
   if (metricTarget.kind === 'observed') {
-    return byDate.find((item) => item.analysis_kind === 'observed');
+    if (!observedForDate.length) return undefined;
+    return observedForDate.find((item) => item.analysis_kind === 'observed') ?? observedForDate[0];
   }
-  return byDate.find((item) =>
-    item.analysis_kind === 'prediction' && normalizeModule(item.module) === metricTarget.module,
-  ) ?? byDate.find((item) => item.analysis_kind === 'prediction');
+
+  const predPool = artifacts.filter((item) => {
+    if (item.analysis_kind !== 'prediction') return false;
+    if (!predictionDate) return true;
+    return item.analysis_date === predictionDate;
+  });
+  if (!predPool.length) return undefined;
+
+  const predByModule = (mod: string) =>
+    predPool.find((item) => normalizeModule(item.module) === mod);
+
+  // trend / alert: предпочитаем слой, где в tilestats есть это поле
+  if (metric === 'trend' || metric === 'alert_level') {
+    const order = ['degradation', 'health_stress', 'irrigation_water_use'] as const;
+    if (attributeByUrl) {
+      for (const mod of order) {
+        const hit = predByModule(mod);
+        if (!hit?.pmtiles_url) continue;
+        const u = toBrowserReachablePmtilesUrl(hit.pmtiles_url);
+        if (u && attributeByUrl.get(u)?.has(metric)) return hit;
+      }
+      for (const item of predPool) {
+        const u = toBrowserReachablePmtilesUrl(item.pmtiles_url);
+        if (u && attributeByUrl.get(u)?.has(metric)) return item;
+      }
+    }
+    return (
+      predByModule('degradation')
+      ?? predByModule('health_stress')
+      ?? predByModule('irrigation_water_use')
+      ?? predPool[0]
+    );
+  }
+  return predByModule(metricTarget.module) ?? predPool[0];
 }
 
 function resolveMetricTarget(metric: string): { kind: 'observed' } | { kind: 'prediction'; module: string } {
-  if (['degradation_score', 'vegetation_cover_loss_score', 'bare_soil_expansion_score', 'heterogeneity_score'].includes(metric)) {
+  if (
+    [
+      'degradation_score',
+      'degradation_class',
+      'forecast_projected_score_m0',
+      'forecast_confidence_m0',
+      'forecast_direction_m0',
+      'trend',
+      'alert_level',
+    ].includes(metric)
+  ) {
     return { kind: 'prediction', module: 'degradation' };
   }
-  if (['health_score', 'stress_score_total', 'water_stress'].includes(metric)) {
+  if (
+    ['health_score', 'stress_score_total', 'water_stress', 'vegetation_activity_drop', 'heterogeneity_growth', 'forecast_projected_score_m1', 'forecast_confidence_m1', 'forecast_direction_m1'].includes(
+      metric,
+    )
+  ) {
     return { kind: 'prediction', module: 'health_stress' };
   }
-  if (['confidence', 'under_irrigation_risk_score', 'over_irrigation_risk_score', 'uniformity_score'].includes(metric)) {
+  if (
+    [
+      'confidence',
+      'forecast_projected_score_m2',
+      'forecast_confidence_m2',
+      'forecast_direction_m2',
+      'irrigation_events_detected',
+      'irrigation_status',
+      'water_balance_risk',
+    ].includes(metric)
+  ) {
     return { kind: 'prediction', module: 'irrigation_water_use' };
   }
   return { kind: 'observed' };
@@ -683,6 +982,11 @@ function normalizeModule(module?: string) {
 
 function onTimelineChange(value: Date) {
   selectedTimelineDate.value = value.toISOString().slice(0, 10);
+}
+
+function onPredictedDateChange(value: unknown) {
+  if (typeof value !== 'string') return;
+  selectedPredictedDate.value = value || null;
 }
 
 function normalizeStage(value?: string | null) {

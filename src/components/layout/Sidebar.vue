@@ -33,8 +33,8 @@ const { currentOrgId } = storeToRefs(currentOrgStore)
               <GalleryVerticalEnd class="size-4" />
             </div>
             <div class="grid flex-1 text-left text-sm leading-tight">
-              <span class="truncate font-semibold">Acme Inc</span>
-              <span class="truncate text-xs">Enterprise</span>
+              <span class="truncate font-semibold">AGGRO</span>
+              <span class="truncate text-xs">Агроаналитика</span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>

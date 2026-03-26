@@ -2,7 +2,7 @@
   <form @submit.prevent="submit" class="flex flex-col gap-1">
     <Input v-model="fieldName" placeholder="Название поля" />
     <div class="flex flex-row gap-2">
-      <Button type="button" variant="secondary" @click="draw">
+      <Button type="button" variant="secondary" title="Нарисовать контур на карте" @click="draw">
         <Paintbrush />
       </Button>
       <Button type="submit" variant="default" :disabled="!canSubmit">Создать</Button>

@@ -24,7 +24,7 @@ const orgs = computed(() => {
   <div class="home">
     <header class="w-screen flex flex-row justify-end">
       <span>{{ username }}</span>
-      <button type="button" @click="keycloak.logout()">Logout</button>
+      <button type="button" @click="keycloak.logout()">Выйти</button>
     </header>
     <p v-if="loadError" class="err">{{ loadError }}</p>
     <ul v-else>
