@@ -20,8 +20,92 @@
               <h1 class="text-xl font-semibold text-slate-900">{{ currentField.name }}</h1>
               <p v-show="sectionOpen.overview" class="text-sm text-slate-600">Текущий сезон: {{ seasonTitle }}</p>
             </div>
-            <Button variant="outline" size="sm" @click="fitTo(currentField.id!)">Центрировать</Button>
+            <div class="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" @click="fitTo(currentField.id!)">Центрировать</Button>
+              <Button variant="outline" size="sm" @click="downloadExport('csv', 'analytics')">Экспорт CSV</Button>
+              <Button variant="outline" size="sm" @click="downloadExport('geojson', 'tiles')">Экспорт GeoJSON</Button>
+            </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-xl border bg-white/90 shadow-sm">
+      <button
+        type="button"
+        class="flex w-full items-center gap-2 p-4 text-left hover:bg-slate-50/90"
+        :aria-expanded="sectionOpen.audit"
+        aria-label="Свернуть или развернуть журнал изменений"
+        @click="sectionOpen.audit = !sectionOpen.audit"
+      >
+        <ChevronDown
+          class="size-5 shrink-0 text-slate-500 transition-transform duration-200"
+          :class="sectionOpen.audit ? '' : '-rotate-90'"
+        />
+        <h2 class="text-lg font-semibold text-slate-900">Журнал изменений поля</h2>
+      </button>
+      <div v-show="sectionOpen.audit" class="border-t border-slate-100 px-4 pb-5 pt-4">
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full min-w-[40rem] table-auto text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 bg-slate-50/90 text-left">
+                <th class="min-w-[11rem] whitespace-nowrap px-4 py-3.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Время
+                </th>
+                <th class="min-w-[10rem] whitespace-nowrap px-4 py-3.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Действие
+                </th>
+                <th class="min-w-[12rem] px-4 py-3.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Кто
+                </th>
+                <th class="min-w-[14rem] px-4 py-3.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Детали
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr
+                v-for="row in auditRows"
+                :key="row.entry.id"
+                class="align-top transition-colors hover:bg-slate-50/70"
+              >
+                <td class="px-4 py-4 text-sm tabular-nums leading-relaxed text-slate-600">
+                  {{ row.entry.created_at ? formatAuditTime(row.entry.created_at) : '—' }}
+                </td>
+                <td class="px-4 py-4">
+                  <span
+                    class="inline-flex rounded-lg bg-emerald-50 px-2.5 py-1 text-sm font-medium text-emerald-900 ring-1 ring-emerald-100/80"
+                    :title="row.entry.action"
+                  >
+                    {{ auditActionLabel(row.entry.action) }}
+                  </span>
+                </td>
+                <td class="max-w-[16rem] px-4 py-4">
+                  <span class="block text-sm leading-relaxed text-slate-800">{{ row.actorLabel }}</span>
+                </td>
+                <td class="min-w-0 px-4 py-4">
+                  <ul v-if="row.lines.length" class="space-y-3 text-sm leading-relaxed">
+                    <li
+                      v-for="(line, i) in row.lines"
+                      :key="i"
+                      class="grid gap-x-5 gap-y-1 sm:items-start"
+                      :class="line.label ? 'grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)]' : 'grid-cols-1'"
+                    >
+                      <template v-if="line.label">
+                        <span class="font-medium text-slate-600">{{ line.label }}</span>
+                        <span class="min-w-0 break-words text-slate-800">{{ line.value }}</span>
+                      </template>
+                      <span v-else class="col-span-full min-w-0 break-words text-slate-800">{{ line.value }}</span>
+                    </li>
+                  </ul>
+                  <span v-else class="text-sm text-slate-500">—</span>
+                </td>
+              </tr>
+              <tr v-if="!auditRows.length">
+                <td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500">Записей пока нет</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -188,6 +272,9 @@
               <th class="pb-2">Запуск</th>
               <th class="pb-2">Статус</th>
               <th class="pb-2">Период</th>
+              <th class="pb-2">Длит.</th>
+              <th class="pb-2">Ошибка</th>
+              <th class="pb-2">Действия</th>
               <th class="pb-2">Прогресс</th>
             </tr>
           </thead>
@@ -197,6 +284,21 @@
               <td class="py-3">{{ statusLabel(run.status) }}</td>
               <td class="py-3 text-xs text-slate-600">
                 {{ run.started_at ? new Date(run.started_at).toLocaleString() : '—' }}
+              </td>
+              <td class="py-3 text-xs">{{ run.duration_seconds != null ? `${run.duration_seconds}s` : '—' }}</td>
+              <td class="py-3 max-w-[200px] truncate text-xs text-red-700" :title="run.failure_message ?? ''">
+                {{ run.failure_message || '—' }}
+              </td>
+              <td class="py-3">
+                <Button
+                  v-if="isStatusRunning(run.status) && run.run_id"
+                  variant="outline"
+                  size="sm"
+                  :disabled="terminateMutation.isPending.value"
+                  @click="terminateMutation.mutate(run.run_id)"
+                >
+                  Остановить
+                </Button>
               </td>
               <td class="py-3">
                 <StepperRoot :model-value="runStep(run)" linear class="grid gap-1">
@@ -221,7 +323,7 @@
               </td>
             </tr>
             <tr v-if="!workflowRuns.length">
-              <td colspan="4" class="py-4 text-sm text-slate-500">Пока нет запусков обработки</td>
+              <td colspan="7" class="py-4 text-sm text-slate-500">Пока нет запусков обработки</td>
             </tr>
           </tbody>
         </table>
@@ -270,8 +372,29 @@
 </template>
 
 <script setup lang="ts">
-import { getFieldsById, getFieldsByIdAnalytics, getFieldsByIdWorkflows, type FieldAnalyticsRow, type FieldWorkflowRun } from '@/api';
+import {
+  getFieldsById,
+  getFieldsByIdAnalytics,
+  getFieldsByIdAudit,
+  getFieldsByIdWorkflows,
+  getOrganizations,
+  getOrganizationsByIdMembers,
+  getSeasons,
+  postFieldsByIdWorkflowsByRunIdTerminate,
+  type FieldAnalyticsRow,
+  type FieldDetail,
+  type FieldWorkflowRun,
+} from '@/api';
+
+/** OpenAPI row type omits some prediction columns the API returns. */
+type FieldAnalyticsRowExt = FieldAnalyticsRow & {
+  prediction_vegetation_activity_drop?: number | null;
+  prediction_heterogeneity_growth?: number | null;
+  prediction_irrigation_events_detected?: number | null;
+};
 import { client } from '@/api/client.gen';
+import { getAccessToken } from '@/auth/keycloak';
+import { pushToast } from '@/lib/toastBus';
 import { useMapPolygons } from '@/composables/useMapPolygons';
 import { PMTILES_CATEGORICAL_METRIC_KEYS, usePmtilesRenderer } from '@/composables/usePmtilesRenderer';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
@@ -321,6 +444,7 @@ const queryClient = useQueryClient();
 
 const sectionOpen = reactive({
   overview: true,
+  audit: true,
   processing: true,
   charts: true,
   mlSummary: true,
@@ -338,6 +462,54 @@ const currentFieldQuery = useQuery({
 });
 
 const currentField = computed(() => currentFieldQuery.data.value?.data);
+
+const orgsQuery = useQuery({
+  queryKey: ['organizations'],
+  queryFn: () => getOrganizations(),
+});
+
+const currentOrgId = computed(() => currentField.value?.organization_id ?? '');
+
+const membersQuery = useQuery({
+  queryKey: ['orgMembers', currentOrgId],
+  queryFn: () => getOrganizationsByIdMembers({ path: { id: currentOrgId.value } }),
+  enabled: computed(() => Boolean(currentOrgId.value)),
+});
+
+const seasonsQuery = useQuery({
+  queryKey: ['fieldSeasons', fieldId],
+  queryFn: () => getSeasons({ query: { field_id: fieldId.value as string } }),
+  enabled: computed(() => Boolean(fieldId.value)),
+});
+
+const orgNameById = computed(() => {
+  const m = new Map<string, string>();
+  for (const o of orgsQuery.data.value?.data?.organizations ?? []) {
+    if (o.id) m.set(o.id, (o.name ?? '').trim() || 'Без названия');
+  }
+  return m;
+});
+
+const memberLabelByUserId = computed(() => {
+  const m = new Map<string, string>();
+  for (const mem of membersQuery.data.value?.data?.members ?? []) {
+    const id = mem.user_id;
+    if (!id) continue;
+    const name = [mem.first_name, mem.last_name].filter(Boolean).join(' ').trim();
+    const label = name || (mem.email ?? '').trim() || (mem.username ?? '').trim();
+    m.set(id, label || 'Участник');
+  }
+  return m;
+});
+
+const seasonNameById = computed(() => {
+  const m = new Map<string, string>();
+  for (const s of seasonsQuery.data.value?.data?.seasons ?? []) {
+    if (s.id) m.set(s.id, (s.name ?? '').trim() || 'Сезон');
+  }
+  return m;
+});
+
 const launchError = ref<string | null>(null);
 const selectedTimelineDate = ref<string | null>(null);
 const selectedPredictedDate = ref<string | null>(null);
@@ -413,7 +585,7 @@ const observedAnalyticsColumn: Partial<Record<MetricItem['key'], keyof FieldAnal
   precipitation_mm_30d: 'precipitation_mm_30d_mean',
 };
 
-const predictedAnalyticsColumn: Partial<Record<MetricItem['key'], keyof FieldAnalyticsRow>> = {
+const predictedAnalyticsColumn: Partial<Record<MetricItem['key'], keyof FieldAnalyticsRowExt>> = {
   degradation_score: 'prediction_degradation_score',
   health_score: 'prediction_health_score',
   stress_score_total: 'prediction_stress_score_total',
@@ -434,6 +606,257 @@ const workflowsQuery = useQuery({
     const runs = query.state.data?.data?.runs ?? [];
     const hasRunning = runs.some((run) => isStatusRunning(run.status));
     return hasRunning ? 2500 : false;
+  },
+});
+
+const runStatusById = ref<Map<string, string>>(new Map());
+watch(
+  () => workflowsQuery.data.value?.data?.runs,
+  (runs) => {
+    if (!runs) return;
+    for (const run of runs) {
+      const rid = run.run_id ?? '';
+      if (!rid) continue;
+      const prev = runStatusById.value.get(rid);
+      const st = run.status ?? '';
+      if (prev !== undefined && prev !== st) {
+        if (st === 'COMPLETED') pushToast('Обработка поля завершена');
+        if (st === 'FAILED') pushToast('Обработка завершилась с ошибкой');
+      }
+      runStatusById.value.set(rid, st);
+    }
+  },
+  { deep: true },
+);
+
+const auditQuery = useQuery({
+  queryKey: ['fieldAudit', fieldId],
+  queryFn: ({ queryKey }) => getFieldsByIdAudit({ path: { id: queryKey[1] as string } }),
+  enabled: computed(() => Boolean(fieldId.value)),
+});
+
+type AuditEntry = {
+  id?: string;
+  action?: string;
+  actor_user_id?: string;
+  payload?: unknown;
+  created_at?: string;
+};
+
+const auditEntries = computed(() => (auditQuery.data.value?.data?.entries ?? []) as AuditEntry[]);
+
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  'field.created': 'Создание поля',
+  'field.updated': 'Изменение поля',
+  'field.deleted': 'Удаление поля',
+  'season.created': 'Сезон добавлен',
+  'season.updated': 'Сезон изменён',
+  'season.deleted': 'Сезон удалён',
+};
+
+const AUDIT_KEY_LABELS: Record<string, string> = {
+  name: 'Название',
+  organization_id: 'Организация',
+  field_id: 'Поле',
+  season_id: 'Сезон',
+  description: 'Описание',
+  start: 'Начало',
+  end: 'Окончание',
+  is_auto: 'Авто',
+  before: 'Было',
+  after: 'Стало',
+};
+
+function auditActionLabel(action: string | undefined): string {
+  if (!action) return '—';
+  return AUDIT_ACTION_LABELS[action] ?? action;
+}
+
+function formatAuditTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function formatPayload(p: unknown): string {
+  if (p == null) return '';
+  try {
+    return JSON.stringify(p, null, 2);
+  } catch {
+    return String(p);
+  }
+}
+
+type AuditResolveCtx = {
+  orgMap: Map<string, string>;
+  userMap: Map<string, string>;
+  seasonMap: Map<string, string>;
+  field: FieldDetail | undefined;
+};
+
+function looksLikeUuid(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+}
+
+function auditFormatScalar(v: unknown, payloadKey: string, ctx: AuditResolveCtx): string {
+  if (v === null || v === undefined) return '—';
+  if (typeof v === 'boolean') return v ? 'да' : 'нет';
+  if (typeof v === 'number') return String(v);
+  if (typeof v === 'string') {
+    if (v === '') return '—';
+    if (looksLikeUuid(v)) {
+      if (payloadKey === 'organization_id')
+        return ctx.orgMap.get(v) ?? 'Неизвестная организация';
+      if (payloadKey === 'field_id')
+        return ctx.field?.id === v ? (ctx.field.name ?? 'Это поле') : 'Другое поле';
+      if (payloadKey === 'season_id') return ctx.seasonMap.get(v) ?? 'Сезон';
+    }
+    return v;
+  }
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
+}
+
+type AuditLine = { label: string; value: string };
+
+function auditPayloadLines(payload: unknown, ctx: AuditResolveCtx): AuditLine[] {
+  if (payload == null) return [];
+  if (typeof payload !== 'object' || Array.isArray(payload)) {
+    const compact = formatPayload(payload).replace(/\s+/g, ' ').trim();
+    return compact ? [{ label: '', value: compact }] : [];
+  }
+  const o = payload as Record<string, unknown>;
+  const keys = Object.keys(o);
+  if (keys.length === 0) return [{ label: '', value: '—' }];
+
+  const lines: AuditLine[] = [];
+  for (const [k, v] of Object.entries(o)) {
+    const baseLabel = AUDIT_KEY_LABELS[k] ?? k.replace(/_/g, ' ');
+    if (
+      v !== null &&
+      typeof v === 'object' &&
+      !Array.isArray(v) &&
+      'from' in (v as object) &&
+      'to' in (v as object)
+    ) {
+      const ch = v as { from: unknown; to: unknown };
+      lines.push({
+        label: baseLabel,
+        value: `«${auditFormatScalar(ch.from, k, ctx)}» → «${auditFormatScalar(ch.to, k, ctx)}»`,
+      });
+      continue;
+    }
+    if (
+      typeof v === 'object' &&
+      v !== null &&
+      !Array.isArray(v) &&
+      (k === 'before' || k === 'after')
+    ) {
+      const prefix = AUDIT_KEY_LABELS[k] ?? k;
+      const nested = v as Record<string, unknown>;
+      for (const [nk, nv] of Object.entries(nested)) {
+        const nl = AUDIT_KEY_LABELS[nk] ?? nk.replace(/_/g, ' ');
+        lines.push({ label: `${prefix} · ${nl}`, value: auditFormatScalar(nv, nk, ctx) });
+      }
+      continue;
+    }
+    if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+      for (const [nk, nv] of Object.entries(v as Record<string, unknown>)) {
+        const nl = AUDIT_KEY_LABELS[nk] ?? nk.replace(/_/g, ' ');
+        const label = `${baseLabel}: ${nl}`;
+        if (
+          nv !== null &&
+          typeof nv === 'object' &&
+          !Array.isArray(nv) &&
+          'from' in nv &&
+          'to' in nv
+        ) {
+          const ch = nv as { from: unknown; to: unknown };
+          lines.push({
+            label,
+            value: `«${auditFormatScalar(ch.from, nk, ctx)}» → «${auditFormatScalar(ch.to, nk, ctx)}»`,
+          });
+        } else {
+          lines.push({ label, value: auditFormatScalar(nv, nk, ctx) });
+        }
+      }
+      continue;
+    }
+    lines.push({ label: baseLabel, value: auditFormatScalar(v, k, ctx) });
+  }
+  return lines;
+}
+
+function resolveActorLabel(userId: string | undefined, userMap: Map<string, string>): string {
+  if (!userId) return '—';
+  return userMap.get(userId) ?? 'Не в списке участников';
+}
+
+const auditRows = computed(() => {
+  const ctx: AuditResolveCtx = {
+    orgMap: orgNameById.value,
+    userMap: memberLabelByUserId.value,
+    seasonMap: seasonNameById.value,
+    field: currentField.value,
+  };
+  return auditEntries.value.map((e) => ({
+    entry: e,
+    actorLabel: resolveActorLabel(e.actor_user_id, ctx.userMap),
+    lines: auditPayloadLines(e.payload, ctx),
+  }));
+});
+
+async function downloadExport(format: 'csv' | 'geojson', kind: 'analytics' | 'tiles') {
+  const id = fieldId.value as string;
+  const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8090';
+  const token = await getAccessToken();
+  if (!token) {
+    launchError.value = 'Нет токена авторизации';
+    return;
+  }
+  const url = `${base.replace(/\/$/, '')}/fields/${id}/export?format=${format}&kind=${kind}`;
+  try {
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) {
+      launchError.value = await res.text();
+      return;
+    }
+    const blob = await res.blob();
+    const cd = res.headers.get('Content-Disposition');
+    let fn = `field-export.${format === 'csv' ? 'csv' : 'geojson'}`;
+    const m = cd?.match(/filename="([^"]+)"/);
+    if (m) fn = m[1];
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fn;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    launchError.value = null;
+  } catch (e) {
+    launchError.value = e instanceof Error ? e.message : 'export failed';
+  }
+}
+
+const terminateMutation = useMutation({
+  mutationFn: async (runId: string) => {
+    const id = fieldId.value as string;
+    await postFieldsByIdWorkflowsByRunIdTerminate({ path: { id, runId } });
+  },
+  onSuccess: () => {
+    void queryClient.invalidateQueries({ queryKey: ['fieldWorkflows', fieldId] });
+    pushToast('Запрос на остановку отправлен');
   },
 });
 
@@ -606,14 +1029,15 @@ const predictedChartByMetric = computed(() => {
     out[item.key] = [];
   }
   for (const row of predRows) {
-    const od = row.observation_date;
+    const r = row as FieldAnalyticsRowExt;
+    const od = r.observation_date;
     if (!od) continue;
     const date = od.slice(0, 10);
     for (const item of chartMetrics.value) {
       const key = item.key;
       const col = predictedAnalyticsColumn[key];
       if (!col) continue;
-      const raw = row[col];
+      const raw = r[col];
       if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
       out[key]!.push({ date, value: raw });
     }
@@ -640,7 +1064,7 @@ function formatSummaryValue(v: unknown): string {
 }
 
 const mlSummaryItems = computed(() => {
-  const row = latestPredictedRow.value;
+  const row = latestPredictedRow.value as FieldAnalyticsRowExt | undefined;
   if (!row) return [] as Array<{ key: string; label: string; value: string }>;
   const items = [
     { key: 'prediction_degradation_score', label: 'Оценка деградации', raw: row.prediction_degradation_score },
@@ -1013,7 +1437,7 @@ function runStep(run: FieldWorkflowRun) {
   return mapStageToStep(run.stage, run.stage_label);
 }
 
-function toBrowserReachablePmtilesUrl(rawUrl: string | null) {
+function toBrowserReachablePmtilesUrl(rawUrl: string | null | undefined) {
   if (!rawUrl) return null;
 
   try {

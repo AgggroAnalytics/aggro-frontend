@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteFieldsByIdData, DeleteFieldsByIdResponses, DeleteSeasonsByIdData, DeleteSeasonsByIdResponses, GetFieldsByIdAnalyticsData, GetFieldsByIdAnalyticsResponses, GetFieldsByIdData, GetFieldsByIdErrors, GetFieldsByIdProcessingDatesData, GetFieldsByIdProcessingDatesResponses, GetFieldsByIdResponses, GetFieldsByIdTilesData, GetFieldsByIdTilesResponses, GetFieldsByIdWorkflowsData, GetFieldsByIdWorkflowsErrors, GetFieldsByIdWorkflowsResponses, GetFieldsData, GetFieldsErrors, GetFieldsResponses, GetHealthzData, GetHealthzResponses, GetOrganizationsData, GetOrganizationsResponses, GetS3ByPathData, GetS3ByPathErrors, GetS3ByPathResponses, GetSeasonsByIdData, GetSeasonsByIdResponses, GetSeasonsData, GetSeasonsResponses, GetTilesByIdMetricsData, GetTilesByIdMetricsErrors, GetTilesByIdMetricsResponses, PostFieldsByIdAnalyticsJobsData, PostFieldsByIdAnalyticsJobsErrors, PostFieldsByIdAnalyticsJobsResponses, PostFieldsByIdBuildPmtilesData, PostFieldsByIdBuildPmtilesResponses, PostFieldsByIdResultsDeleteData, PostFieldsByIdResultsDeleteResponses, PostFieldsByIdWorkflowsData, PostFieldsByIdWorkflowsErrors, PostFieldsByIdWorkflowsResponses, PostFieldsData, PostFieldsErrors, PostFieldsResponses, PostOrganizationsByIdInviteData, PostOrganizationsByIdInviteResponses, PostOrganizationsData, PostOrganizationsResponses, PostSeasonsData, PostSeasonsResponses, PutFieldsByIdData, PutFieldsByIdResponses, PutSeasonsByIdData, PutSeasonsByIdResponses } from './types.gen';
+import type { DeleteFieldsByIdData, DeleteFieldsByIdResponses, DeleteOrganizationsByIdMembersByUserIdData, DeleteOrganizationsByIdMembersByUserIdResponses, DeleteSeasonsByIdData, DeleteSeasonsByIdResponses, GetFieldsByIdAnalyticsData, GetFieldsByIdAnalyticsResponses, GetFieldsByIdAuditData, GetFieldsByIdAuditResponses, GetFieldsByIdData, GetFieldsByIdErrors, GetFieldsByIdExportData, GetFieldsByIdExportResponses, GetFieldsByIdProcessingDatesData, GetFieldsByIdProcessingDatesResponses, GetFieldsByIdResponses, GetFieldsByIdTilesData, GetFieldsByIdTilesResponses, GetFieldsByIdWorkflowsByRunIdFailureData, GetFieldsByIdWorkflowsByRunIdFailureResponses, GetFieldsByIdWorkflowsData, GetFieldsByIdWorkflowsErrors, GetFieldsByIdWorkflowsResponses, GetFieldsData, GetFieldsErrors, GetFieldsResponses, GetHealthzData, GetHealthzResponses, GetOrganizationsByIdAuditLogData, GetOrganizationsByIdAuditLogResponses, GetOrganizationsByIdDashboardData, GetOrganizationsByIdDashboardErrors, GetOrganizationsByIdDashboardResponses, GetOrganizationsByIdFieldWorkflowRunsData, GetOrganizationsByIdFieldWorkflowRunsResponses, GetOrganizationsByIdMembersData, GetOrganizationsByIdMembersResponses, GetOrganizationsByIdWeatherData, GetOrganizationsByIdWeatherErrors, GetOrganizationsByIdWeatherResponses, GetOrganizationsData, GetOrganizationsResponses, GetS3ByPathData, GetS3ByPathErrors, GetS3ByPathResponses, GetSeasonsByIdData, GetSeasonsByIdResponses, GetSeasonsData, GetSeasonsResponses, GetTilesByIdMetricsData, GetTilesByIdMetricsErrors, GetTilesByIdMetricsResponses, GetUsersMeData, GetUsersMeResponses, PatchOrganizationsByIdMembersByUserIdData, PatchOrganizationsByIdMembersByUserIdResponses, PatchOrganizationsByIdSeasonTargetsData, PatchOrganizationsByIdSeasonTargetsResponses, PatchUsersMePreferencesData, PatchUsersMePreferencesResponses, PostFieldsByIdResultsDeleteData, PostFieldsByIdResultsDeleteResponses, PostFieldsByIdWorkflowsByRunIdTerminateData, PostFieldsByIdWorkflowsByRunIdTerminateResponses, PostFieldsByIdWorkflowsData, PostFieldsByIdWorkflowsErrors, PostFieldsByIdWorkflowsResponses, PostFieldsData, PostFieldsErrors, PostFieldsResponses, PostOrganizationsByIdInviteData, PostOrganizationsByIdInviteResponses, PostOrganizationsData, PostOrganizationsResponses, PostSeasonsData, PostSeasonsResponses, PutFieldsByIdData, PutFieldsByIdResponses, PutSeasonsByIdData, PutSeasonsByIdResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -126,6 +126,42 @@ export const postFieldsByIdWorkflows = <ThrowOnError extends boolean = false>(op
 });
 
 /**
+ * Human-readable workflow failure message (Temporal close history)
+ */
+export const getFieldsByIdWorkflowsByRunIdFailure = <ThrowOnError extends boolean = false>(options: Options<GetFieldsByIdWorkflowsByRunIdFailureData, ThrowOnError>) => (options.client ?? client).get<GetFieldsByIdWorkflowsByRunIdFailureResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/fields/{id}/workflows/{runId}/failure',
+    ...options
+});
+
+/**
+ * Terminate a workflow run (manager+)
+ */
+export const postFieldsByIdWorkflowsByRunIdTerminate = <ThrowOnError extends boolean = false>(options: Options<PostFieldsByIdWorkflowsByRunIdTerminateData, ThrowOnError>) => (options.client ?? client).post<PostFieldsByIdWorkflowsByRunIdTerminateResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/fields/{id}/workflows/{runId}/terminate',
+    ...options
+});
+
+/**
+ * Field change audit log
+ */
+export const getFieldsByIdAudit = <ThrowOnError extends boolean = false>(options: Options<GetFieldsByIdAuditData, ThrowOnError>) => (options.client ?? client).get<GetFieldsByIdAuditResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/fields/{id}/audit',
+    ...options
+});
+
+/**
+ * Export analytics CSV or tiles GeoJSON
+ */
+export const getFieldsByIdExport = <ThrowOnError extends boolean = false>(options: Options<GetFieldsByIdExportData, ThrowOnError>) => (options.client ?? client).get<GetFieldsByIdExportResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/fields/{id}/export',
+    ...options
+});
+
+/**
  * Current season dates with processed flags
  *
  * Returns all dates in current season and whether each date already has field analytics.
@@ -149,24 +185,6 @@ export const postFieldsByIdResultsDelete = <ThrowOnError extends boolean = false
         'Content-Type': 'application/json',
         ...options.headers
     }
-});
-
-/**
- * Publish ML jobs to RabbitMQ (legacy path)
- */
-export const postFieldsByIdAnalyticsJobs = <ThrowOnError extends boolean = false>(options: Options<PostFieldsByIdAnalyticsJobsData, ThrowOnError>) => (options.client ?? client).post<PostFieldsByIdAnalyticsJobsResponses, PostFieldsByIdAnalyticsJobsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/fields/{id}/analytics-jobs',
-    ...options
-});
-
-/**
- * Trigger PMTiles build jobs (RabbitMQ)
- */
-export const postFieldsByIdBuildPmtiles = <ThrowOnError extends boolean = false>(options: Options<PostFieldsByIdBuildPmtilesData, ThrowOnError>) => (options.client ?? client).post<PostFieldsByIdBuildPmtilesResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/fields/{id}/build-pmtiles',
-    ...options
 });
 
 /**
@@ -242,6 +260,108 @@ export const postOrganizationsByIdInvite = <ThrowOnError extends boolean = false
     headers: {
         'Content-Type': 'application/json',
         ...options.headers
+    }
+});
+
+/**
+ * List organization members
+ */
+export const getOrganizationsByIdMembers = <ThrowOnError extends boolean = false>(options: Options<GetOrganizationsByIdMembersData, ThrowOnError>) => (options.client ?? client).get<GetOrganizationsByIdMembersResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{id}/members',
+    ...options
+});
+
+/**
+ * Remove member (manager+)
+ */
+export const deleteOrganizationsByIdMembersByUserId = <ThrowOnError extends boolean = false>(options: Options<DeleteOrganizationsByIdMembersByUserIdData, ThrowOnError>) => (options.client ?? client).delete<DeleteOrganizationsByIdMembersByUserIdResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{id}/members/{userId}',
+    ...options
+});
+
+/**
+ * Change member role (manager+)
+ */
+export const patchOrganizationsByIdMembersByUserId = <ThrowOnError extends boolean = false>(options: Options<PatchOrganizationsByIdMembersByUserIdData, ThrowOnError>) => (options.client ?? client).patch<PatchOrganizationsByIdMembersByUserIdResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{id}/members/{userId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Recent workflow runs for all fields in organization
+ */
+export const getOrganizationsByIdFieldWorkflowRuns = <ThrowOnError extends boolean = false>(options: Options<GetOrganizationsByIdFieldWorkflowRunsData, ThrowOnError>) => (options.client ?? client).get<GetOrganizationsByIdFieldWorkflowRunsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{id}/field-workflow-runs',
+    ...options
+});
+
+/**
+ * Organization home dashboard (stats, NDVI weekly, audit snippet, workflows)
+ */
+export const getOrganizationsByIdDashboard = <ThrowOnError extends boolean = false>(options: Options<GetOrganizationsByIdDashboardData, ThrowOnError>) => (options.client ?? client).get<GetOrganizationsByIdDashboardResponses, GetOrganizationsByIdDashboardErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{id}/dashboard',
+    ...options
+});
+
+/**
+ * Field audit entries for all fields in the organization
+ */
+export const getOrganizationsByIdAuditLog = <ThrowOnError extends boolean = false>(options: Options<GetOrganizationsByIdAuditLogData, ThrowOnError>) => (options.client ?? client).get<GetOrganizationsByIdAuditLogResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{id}/audit-log',
+    ...options
+});
+
+/**
+ * Update JSON season KPI targets for the organization (manager+)
+ */
+export const patchOrganizationsByIdSeasonTargets = <ThrowOnError extends boolean = false>(options: Options<PatchOrganizationsByIdSeasonTargetsData, ThrowOnError>) => (options.client ?? client).patch<PatchOrganizationsByIdSeasonTargetsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{id}/season-targets',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Weather forecast (Open-Meteo) at centroid of org fields
+ */
+export const getOrganizationsByIdWeather = <ThrowOnError extends boolean = false>(options: Options<GetOrganizationsByIdWeatherData, ThrowOnError>) => (options.client ?? client).get<GetOrganizationsByIdWeatherResponses, GetOrganizationsByIdWeatherErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{id}/weather',
+    ...options
+});
+
+/**
+ * Current user profile (JWT + saved preferences)
+ */
+export const getUsersMe = <ThrowOnError extends boolean = false>(options?: Options<GetUsersMeData, ThrowOnError>) => (options?.client ?? client).get<GetUsersMeResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/me',
+    ...options
+});
+
+/**
+ * Update UI preferences
+ */
+export const patchUsersMePreferences = <ThrowOnError extends boolean = false>(options?: Options<PatchUsersMePreferencesData, ThrowOnError>) => (options?.client ?? client).patch<PatchUsersMePreferencesResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/me/preferences',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers
     }
 });
 

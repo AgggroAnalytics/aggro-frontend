@@ -6,6 +6,10 @@ if (!VITE_KEYCLOAK_URL || !VITE_KEYCLOAK_REALM || !VITE_KEYCLOAK_CLIENT_ID) {
   console.warn(
     '[keycloak] Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, VITE_KEYCLOAK_CLIENT_ID in .env',
   );
+} else if (import.meta.env.DEV && import.meta.env.VITE_API_BASE_URL === VITE_KEYCLOAK_URL) {
+  console.warn(
+    '[keycloak] VITE_KEYCLOAK_URL совпадает с VITE_API_BASE_URL — /realms/... пойдёт на API и даст 400. Keycloak обычно на другом порту (см. infra/README.md, чаще 8180).',
+  );
 }
 
 export const keycloak = new Keycloak({

@@ -24,8 +24,13 @@ router.beforeEach(async (to) => {
   }
 
   const currentOrgStore = useCurrentOrgStore();
-  if (!currentOrgStore.currentOrgId) {
-    const orgs = await getOrganizations();
-    currentOrgStore.currentOrgId = orgs.data?.organizations?.at(0)?.id;
+  const orgs = await getOrganizations();
+  const list = orgs.data?.organizations ?? [];
+  const ids = new Set(list.map((o) => o.id).filter(Boolean) as string[]);
+  if (currentOrgStore.currentOrgId && !ids.has(currentOrgStore.currentOrgId)) {
+    currentOrgStore.currentOrgId = null;
+  }
+  if (!currentOrgStore.currentOrgId && list.length) {
+    currentOrgStore.currentOrgId = list[0].id ?? null;
   }
 });

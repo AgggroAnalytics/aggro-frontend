@@ -20,6 +20,23 @@ export type FieldListItem = {
     area_hectares?: number | null;
     organization_id?: string;
     /**
+     * Number of geometry tiles for this field
+     */
+    tile_count?: number;
+    season_count?: number;
+    /**
+     * Latest satellite/observation timestamp across tile timeseries
+     */
+    latest_observation_at?: string | null;
+    /**
+     * Distinct dates with observed field-level analytics
+     */
+    observed_analytics_dates?: number;
+    /**
+     * Stored PMTiles map layers for this field
+     */
+    pmtiles_layer_count?: number;
+    /**
      * Polygon rings [lon, lat], number[][][]
      */
     coordinates?: Array<Array<Array<number>>>;
@@ -94,6 +111,11 @@ export type FieldWorkflowRun = {
     active_stages?: Array<string>;
     started_at?: string | null;
     closed_at?: string | null;
+    duration_seconds?: number | null;
+    /**
+     * Set when status is FAILED
+     */
+    failure_message?: string | null;
 };
 
 export type FieldAnalyticsResponse = {
@@ -440,6 +462,98 @@ export type PostFieldsByIdWorkflowsResponses = {
 
 export type PostFieldsByIdWorkflowsResponse = PostFieldsByIdWorkflowsResponses[keyof PostFieldsByIdWorkflowsResponses];
 
+export type GetFieldsByIdWorkflowsByRunIdFailureData = {
+    body?: never;
+    path: {
+        id: string;
+        runId: string;
+    };
+    query?: never;
+    url: '/fields/{id}/workflows/{runId}/failure';
+};
+
+export type GetFieldsByIdWorkflowsByRunIdFailureResponses = {
+    200: {
+        message?: string;
+        detail?: string;
+    };
+};
+
+export type GetFieldsByIdWorkflowsByRunIdFailureResponse = GetFieldsByIdWorkflowsByRunIdFailureResponses[keyof GetFieldsByIdWorkflowsByRunIdFailureResponses];
+
+export type PostFieldsByIdWorkflowsByRunIdTerminateData = {
+    body?: never;
+    path: {
+        id: string;
+        runId: string;
+    };
+    query?: never;
+    url: '/fields/{id}/workflows/{runId}/terminate';
+};
+
+export type PostFieldsByIdWorkflowsByRunIdTerminateResponses = {
+    200: {
+        status?: string;
+    };
+};
+
+export type PostFieldsByIdWorkflowsByRunIdTerminateResponse = PostFieldsByIdWorkflowsByRunIdTerminateResponses[keyof PostFieldsByIdWorkflowsByRunIdTerminateResponses];
+
+export type GetFieldsByIdAuditData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        limit?: number;
+    };
+    url: '/fields/{id}/audit';
+};
+
+export type GetFieldsByIdAuditResponses = {
+    200: {
+        field_id?: string;
+        entries?: Array<{
+            id?: string;
+            actor_user_id?: string;
+            action?: string;
+            payload?: {
+                [key: string]: unknown;
+            };
+            created_at?: string;
+        }>;
+    };
+};
+
+export type GetFieldsByIdAuditResponse = GetFieldsByIdAuditResponses[keyof GetFieldsByIdAuditResponses];
+
+export type GetFieldsByIdExportData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        format?: 'csv' | 'geojson';
+        kind?: 'analytics' | 'tiles';
+        /**
+         * Inclusive start date (YYYY-MM-DD) for analytics CSV only
+         */
+        date_from?: string;
+        /**
+         * Inclusive end date (YYYY-MM-DD) for analytics CSV only
+         */
+        date_to?: string;
+    };
+    url: '/fields/{id}/export';
+};
+
+export type GetFieldsByIdExportResponses = {
+    /**
+     * File download
+     */
+    200: unknown;
+};
+
 export type GetFieldsByIdProcessingDatesData = {
     body?: never;
     path: {
@@ -484,51 +598,6 @@ export type PostFieldsByIdResultsDeleteResponses = {
 };
 
 export type PostFieldsByIdResultsDeleteResponse = PostFieldsByIdResultsDeleteResponses[keyof PostFieldsByIdResultsDeleteResponses];
-
-export type PostFieldsByIdAnalyticsJobsData = {
-    body?: never;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/fields/{id}/analytics-jobs';
-};
-
-export type PostFieldsByIdAnalyticsJobsErrors = {
-    /**
-     * ML publisher not configured
-     */
-    503: unknown;
-};
-
-export type PostFieldsByIdAnalyticsJobsResponses = {
-    202: {
-        status?: string;
-        tiles_total?: number;
-        tiles_with_ts?: number;
-        jobs_sent?: number;
-    };
-};
-
-export type PostFieldsByIdAnalyticsJobsResponse = PostFieldsByIdAnalyticsJobsResponses[keyof PostFieldsByIdAnalyticsJobsResponses];
-
-export type PostFieldsByIdBuildPmtilesData = {
-    body?: never;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/fields/{id}/build-pmtiles';
-};
-
-export type PostFieldsByIdBuildPmtilesResponses = {
-    202: {
-        status?: string;
-        jobs_sent?: number;
-    };
-};
-
-export type PostFieldsByIdBuildPmtilesResponse = PostFieldsByIdBuildPmtilesResponses[keyof PostFieldsByIdBuildPmtilesResponses];
 
 export type GetSeasonsData = {
     body?: never;
@@ -673,6 +742,224 @@ export type PostOrganizationsByIdInviteResponses = {
 };
 
 export type PostOrganizationsByIdInviteResponse = PostOrganizationsByIdInviteResponses[keyof PostOrganizationsByIdInviteResponses];
+
+export type GetOrganizationsByIdMembersData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/organizations/{id}/members';
+};
+
+export type GetOrganizationsByIdMembersResponses = {
+    200: {
+        members?: Array<{
+            user_id?: string;
+            username?: string;
+            email?: string;
+            first_name?: string;
+            last_name?: string;
+            role?: string;
+            member_since?: string;
+        }>;
+    };
+};
+
+export type GetOrganizationsByIdMembersResponse = GetOrganizationsByIdMembersResponses[keyof GetOrganizationsByIdMembersResponses];
+
+export type DeleteOrganizationsByIdMembersByUserIdData = {
+    body?: never;
+    path: {
+        id: string;
+        userId: string;
+    };
+    query?: never;
+    url: '/organizations/{id}/members/{userId}';
+};
+
+export type DeleteOrganizationsByIdMembersByUserIdResponses = {
+    /**
+     * No content
+     */
+    204: void;
+};
+
+export type DeleteOrganizationsByIdMembersByUserIdResponse = DeleteOrganizationsByIdMembersByUserIdResponses[keyof DeleteOrganizationsByIdMembersByUserIdResponses];
+
+export type PatchOrganizationsByIdMembersByUserIdData = {
+    body?: {
+        role: 'admin' | 'manager' | 'farmer' | 'viewer';
+    };
+    path: {
+        id: string;
+        userId: string;
+    };
+    query?: never;
+    url: '/organizations/{id}/members/{userId}';
+};
+
+export type PatchOrganizationsByIdMembersByUserIdResponses = {
+    200: {
+        status?: string;
+    };
+};
+
+export type PatchOrganizationsByIdMembersByUserIdResponse = PatchOrganizationsByIdMembersByUserIdResponses[keyof PatchOrganizationsByIdMembersByUserIdResponses];
+
+export type GetOrganizationsByIdFieldWorkflowRunsData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/organizations/{id}/field-workflow-runs';
+};
+
+export type GetOrganizationsByIdFieldWorkflowRunsResponses = {
+    200: {
+        organization_id?: string;
+        runs?: Array<{
+            field_id?: string;
+            field_name?: string;
+            run?: FieldWorkflowRun;
+        }>;
+    };
+};
+
+export type GetOrganizationsByIdFieldWorkflowRunsResponse = GetOrganizationsByIdFieldWorkflowRunsResponses[keyof GetOrganizationsByIdFieldWorkflowRunsResponses];
+
+export type GetOrganizationsByIdDashboardData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/organizations/{id}/dashboard';
+};
+
+export type GetOrganizationsByIdDashboardErrors = {
+    /**
+     * Dashboard SQL not configured
+     */
+    503: unknown;
+};
+
+export type GetOrganizationsByIdDashboardResponses = {
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetOrganizationsByIdDashboardResponse = GetOrganizationsByIdDashboardResponses[keyof GetOrganizationsByIdDashboardResponses];
+
+export type GetOrganizationsByIdAuditLogData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        limit?: number;
+    };
+    url: '/organizations/{id}/audit-log';
+};
+
+export type GetOrganizationsByIdAuditLogResponses = {
+    200: {
+        organization_id?: string;
+        entries?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetOrganizationsByIdAuditLogResponse = GetOrganizationsByIdAuditLogResponses[keyof GetOrganizationsByIdAuditLogResponses];
+
+export type PatchOrganizationsByIdSeasonTargetsData = {
+    /**
+     * e.g. ndvi_target, health_score_target, notes
+     */
+    body: {
+        [key: string]: unknown;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/organizations/{id}/season-targets';
+};
+
+export type PatchOrganizationsByIdSeasonTargetsResponses = {
+    200: {
+        status?: string;
+    };
+};
+
+export type PatchOrganizationsByIdSeasonTargetsResponse = PatchOrganizationsByIdSeasonTargetsResponses[keyof PatchOrganizationsByIdSeasonTargetsResponses];
+
+export type GetOrganizationsByIdWeatherData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/organizations/{id}/weather';
+};
+
+export type GetOrganizationsByIdWeatherErrors = {
+    /**
+     * No fields / no centroid
+     */
+    404: unknown;
+};
+
+export type GetOrganizationsByIdWeatherResponses = {
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetOrganizationsByIdWeatherResponse = GetOrganizationsByIdWeatherResponses[keyof GetOrganizationsByIdWeatherResponses];
+
+export type GetUsersMeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/users/me';
+};
+
+export type GetUsersMeResponses = {
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetUsersMeResponse = GetUsersMeResponses[keyof GetUsersMeResponses];
+
+export type PatchUsersMePreferencesData = {
+    body?: {
+        locale?: string;
+        timezone?: string;
+        avatar_url?: string;
+        units_system?: 'metric' | 'imperial';
+        /**
+         * e.g. dmy
+         */
+        date_format?: string;
+        fields_default_year?: number | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/users/me/preferences';
+};
+
+export type PatchUsersMePreferencesResponses = {
+    200: {
+        status?: string;
+    };
+};
+
+export type PatchUsersMePreferencesResponse = PatchUsersMePreferencesResponses[keyof PatchUsersMePreferencesResponses];
 
 export type GetTilesByIdMetricsData = {
     body?: never;

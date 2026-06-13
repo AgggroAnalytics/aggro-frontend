@@ -33,8 +33,8 @@ const { currentOrgId } = storeToRefs(currentOrgStore)
               <GalleryVerticalEnd class="size-4" />
             </div>
             <div class="grid flex-1 text-left text-sm leading-tight">
-              <span class="truncate font-semibold">AGGRO</span>
-              <span class="truncate text-xs">Агроаналитика</span>
+              <span class="truncate font-semibold">CPV</span>
+              <span class="truncate text-xs">Сельхозземли · космоснимки</span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -47,6 +47,13 @@ const { currentOrgId } = storeToRefs(currentOrgStore)
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton as-child>
+                <RouterLink to="/">
+                  <span>Обзор</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton as-child>
                 <RouterLink to="/organization">
                   <span>Организации</span>
                 </RouterLink>
@@ -54,8 +61,43 @@ const { currentOrgId } = storeToRefs(currentOrgStore)
             </SidebarMenuItem>
             <SidebarMenuItem v-if="currentOrgId">
               <SidebarMenuButton as-child>
+                <RouterLink to="/organization/members">
+                  <span>Участники</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem v-if="currentOrgId">
+              <SidebarMenuButton as-child>
+                <RouterLink to="/jobs">
+                  <span>Задачи</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem v-if="currentOrgId">
+              <SidebarMenuButton as-child>
                 <RouterLink to="/fields">
                   <span>Поля</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton as-child>
+                <RouterLink to="/me/profile">
+                  <span>Профиль</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton as-child>
+                <RouterLink to="/me/settings">
+                  <span>Настройки</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton as-child>
+                <RouterLink to="/me/security">
+                  <span>Безопасность</span>
                 </RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>

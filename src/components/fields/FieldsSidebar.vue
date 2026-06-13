@@ -13,8 +13,14 @@
       <Separator class="my-4" />
       <div v-if="fields.length">
         <h2 class="text-xl font-semibold mb-4">Поля</h2>
-        <div v-for="field in fields">
-          <FieldCard :field="field" @fitTo="fitTo(field.id!)" @enter="navToField(field.id!)" />
+        <div class="space-y-3">
+          <FieldCard
+            v-for="field in fields"
+            :key="field.id"
+            :field="field"
+            @fit-to="fitTo(field.id!)"
+            @enter="navToField(field.id!)"
+          />
         </div>
       </div>
     </div>

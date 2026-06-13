@@ -40,7 +40,7 @@ const createOrg = useMutation({
   },
   onSettled(data) {
     client.invalidateQueries({ queryKey: ["organizations"] })
-    currentOrgId.value = data?.data?.id
+    currentOrgId.value = data?.data?.id ?? null
     router.push("/fields")
   }
 })

@@ -31,9 +31,10 @@ const { currentOrgId } = storeToRefs(currOrgStore)
 </script>
 
 <template>
-  <div>
+  <div class="flex items-center gap-2">
+    <span class="hidden text-xs text-slate-500 sm:inline">Организация</span>
     <Select v-model="currentOrgId">
-      <SelectTrigger class="w-45">
+      <SelectTrigger class="w-45 min-w-[10rem]">
         <SelectValue placeholder="Выберите организацию" />
       </SelectTrigger>
       <SelectContent>

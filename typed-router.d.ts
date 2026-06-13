@@ -47,9 +47,37 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/jobs/': RouteRecordInfo<
+      '/jobs/',
+      '/jobs',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/login': RouteRecordInfo<
       '/login',
       '/login',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/me/profile': RouteRecordInfo<
+      '/me/profile',
+      '/me/profile',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/me/security': RouteRecordInfo<
+      '/me/security',
+      '/me/security',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/me/settings': RouteRecordInfo<
+      '/me/settings',
+      '/me/settings',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -64,6 +92,13 @@ declare module 'vue-router/auto-routes' {
     '/organization/create/': RouteRecordInfo<
       '/organization/create/',
       '/organization/create',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/organization/members': RouteRecordInfo<
+      '/organization/members',
+      '/organization/members',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -99,9 +134,33 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/jobs/index.vue': {
+      routes:
+        | '/jobs/'
+      views:
+        | never
+    }
     'src/pages/login.vue': {
       routes:
         | '/login'
+      views:
+        | never
+    }
+    'src/pages/me/profile.vue': {
+      routes:
+        | '/me/profile'
+      views:
+        | never
+    }
+    'src/pages/me/security.vue': {
+      routes:
+        | '/me/security'
+      views:
+        | never
+    }
+    'src/pages/me/settings.vue': {
+      routes:
+        | '/me/settings'
       views:
         | never
     }
@@ -114,6 +173,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/organization/create/index.vue': {
       routes:
         | '/organization/create/'
+      views:
+        | never
+    }
+    'src/pages/organization/members.vue': {
+      routes:
+        | '/organization/members'
       views:
         | never
     }

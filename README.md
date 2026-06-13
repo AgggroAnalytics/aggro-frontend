@@ -17,6 +17,8 @@ npm run dev
 3. **Valid redirect URIs:** `http://localhost:5173/*` (и прод-домен).
 4. **Web origins:** `http://localhost:5173` (CORS для прямых запросов к Keycloak).
 
+`VITE_KEYCLOAK_URL` — **только** базовый URL Keycloak (без `/realms/...`). Не подставляйте сюда URL HTTP API: иначе iframe `3p-cookies/step1.html` уйдёт на бэкенд и вернёт **400**. Keycloak в Tilt/k8s — **8180**; HTTP API в кластере — **8080**, локально часто **8090** (`VITE_API_BASE_URL`) — см. `infra/README.md`.
+
 Бэкенд (`KEYCLOAK_ISSUER`, `KEYCLOAK_JWKS_URI`) должен валидировать токены того же realm.
 
 ## Как устроено

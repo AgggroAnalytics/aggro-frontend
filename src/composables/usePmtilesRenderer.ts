@@ -413,7 +413,7 @@ function buildFillColorExpression(
       ['coalesce', ['to-string', ['get', metricField]], ''],
       ...pairs,
       '#cbd5e1',
-    ];
+    ] as unknown as maplibregl.ExpressionSpecification;
   }
 
   const metricRange = resolveMetricRange(metadata, sourceLayer, metricField);
